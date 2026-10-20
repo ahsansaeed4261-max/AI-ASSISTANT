@@ -12,6 +12,35 @@ const path = require('path');
 const Store = require('electron-store');
 const trigger = require('./trigger');
 
+// ── Fast exit for --action ────────────────────────────────────────────────────
+// If this process was launched with --action, run it and quit immediately.
+// This must happen before requestSingleInstanceLock so it never waits for
+// a running instance and never creates any windows.
+const _actionIdx = process.argv.indexOf('--action');
+if (_actionIdx !== -1) {
+  const _jsonStr = process.argv[_actionIdx + 1];
+  const { runAction } = require('./actions');
+
+  app.whenReady().then(async () => {
+    if (!_jsonStr) {
+      process.stderr.write(JSON.stringify({ ok: false, error: '--action requires a JSON argument' }) + '\n');
+      app.exit(1);
+      return;
+    }
+    try {
+      const result = await runAction(_jsonStr);
+      process.stdout.write(JSON.stringify({ ok: true, result }) + '\n');
+      app.exit(0);
+    } catch (err) {
+      process.stderr.write(JSON.stringify({ ok: false, error: err.message }) + '\n');
+      app.exit(1);
+    }
+  });
+
+  // Skip everything else in this file – no lock, no tray, no recorder
+  return;
+}
+
 // ── Single-instance lock (must happen before app.whenReady) ──────────────────
 // If another instance is already running, forward our argv to it and quit.
 const gotLock = app.requestSingleInstanceLock();

@@ -34,15 +34,37 @@ function isRecording() { return _recording; }
 // ── Argv parser ──────────────────────────────────────────────────────────────
 
 /**
- * Parse an argv array and execute --start / --stop / --toggle / --settings.
- * Called both from the first-instance's own process.argv (after app ready)
- * and from the 'second-instance' event handler in main.js.
+ * Parse an argv array and execute:
+ *   --start | --stop | --toggle | --settings | --action '<json>'
+ *
+ * Called from the first-instance's own process.argv (after app ready)
+ * AND from the 'second-instance' event handler in main.js.
  *
  * @param {string[]} argv
  */
 async function handleArgv(argv) {
   console.log('[trigger] received:', argv);
 
+  // ── --action <json> ───────────────────────────────────────────────────────
+  const actionIdx = argv.indexOf('--action');
+  if (actionIdx !== -1) {
+    const jsonStr = argv[actionIdx + 1];
+    if (!jsonStr) {
+      console.error('[trigger] --action requires a JSON argument, e.g. --action \'{"name":"open_url","params":{"url":"https://example.com"}}\'');
+      return;
+    }
+    const { runAction } = require('./actions');
+    try {
+      const result = await runAction(jsonStr);
+      process.stdout.write(JSON.stringify({ ok: true, result }) + '\n');
+    } catch (err) {
+      process.stderr.write(JSON.stringify({ ok: false, error: err.message }) + '\n');
+      console.error('[trigger] --action failed:', err.message);
+    }
+    return;
+  }
+
+  // ── --settings ────────────────────────────────────────────────────────────
   if (argv.includes('--settings')) {
     console.log('[trigger] --settings: opening settings window');
     if (typeof _openSettings === 'function') {
@@ -50,24 +72,18 @@ async function handleArgv(argv) {
     } else {
       console.warn('[trigger] --settings: openSettings callback not registered yet');
     }
-  } else if (argv.includes('--start')) {
-    if (_recording) {
-      console.log('[trigger] --start ignored, already recording');
-      return;
-    }
+    return;
+  }
+
+  // ── --start / --stop / --toggle ───────────────────────────────────────────
+  if (argv.includes('--start')) {
+    if (_recording) { console.log('[trigger] --start ignored, already recording'); return; }
     await doStart();
   } else if (argv.includes('--stop')) {
-    if (!_recording) {
-      console.log('[trigger] --stop ignored, not recording');
-      return;
-    }
+    if (!_recording) { console.log('[trigger] --stop ignored, not recording'); return; }
     await doStop();
   } else if (argv.includes('--toggle')) {
-    if (_recording) {
-      await doStop();
-    } else {
-      await doStart();
-    }
+    if (_recording) { await doStop(); } else { await doStart(); }
   }
 }
 
