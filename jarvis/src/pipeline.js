@@ -6,7 +6,7 @@
 'use strict';
 
 const { BrowserWindow, ipcMain } = require('electron');
-const { showOverlay, getApiKeys } = require('./main');
+const { showOverlay, getApiKeys, store } = require('./main');
 const transcribe = require('./transcribe');
 const cleanup = require('./cleanup');
 const paste = require('./paste');
@@ -168,6 +168,15 @@ async function stopRecording() {
     return;
   }
   console.log('[pipeline] Stage 4 done – paste complete');
+
+  const history = store.get('history');
+  const entries = Array.isArray(history) ? history : [];
+  entries.unshift({
+    time: new Date().toISOString(),
+    raw: transcript,
+    cleaned,
+  });
+  store.set('history', entries.slice(0, 50));
 
   feedback('done');
   // Small delay so the "Done" notification is visible before we clear state

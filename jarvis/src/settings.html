@@ -64,7 +64,8 @@
     }
 
     input[type="text"],
-    input[type="password"] {
+    input[type="password"],
+    select {
       width: 100%;
       background: #2a2a2a;
       border: 1px solid rgba(255,255,255,0.1);
@@ -74,24 +75,106 @@
       font-size: 13px;
       outline: none;
       transition: border-color 0.15s;
+    }
+
+    input[type="text"],
+    input[type="password"] {
       font-family: 'Courier New', monospace;
     }
 
     input[type="text"]:focus,
-    input[type="password"]:focus {
+    input[type="password"]:focus,
+    select:focus {
       border-color: #4a9eff;
     }
 
-    .hint {
-      font-size: 11px;
-      color: #555;
-      margin-top: 4px;
+    .key-input-row {
+      display: flex;
+      gap: 8px;
     }
+
+    .key-input-row input { flex: 1; }
+
+    .key-toggle {
+      min-width: 58px;
+      padding: 8px 10px;
+      background: #333;
+      color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .key-toggle:hover { background: #3d3d3d; }
 
     .hotkey-row {
       display: flex;
       gap: 8px;
       align-items: center;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .history-list {
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .history-entry {
+      background: #222;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .history-entry-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+
+    .history-time {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .history-label {
+      font-size: 11px;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .history-text {
+      color: #ddd;
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin-top: 2px;
+    }
+
+    .history-copy,
+    .history-clear {
+      padding: 5px 9px;
+      background: #333;
+      color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 11px;
+    }
+
+    .history-copy:hover,
+    .history-clear:hover { background: #3d3d3d; }
+
+    .history-empty {
+      color: #666;
+      font-size: 12px;
+      padding: 8px 0;
     }
 
     .hotkey-chip {
@@ -169,20 +252,75 @@
 
   <div class="field">
     <label>Claude API Key <span style="color:#888">(for cleanup)</span></label>
-    <input type="password" id="claudeKey" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="key-input-row">
+      <input type="password" id="claudeKey" placeholder="sk-ant-..." autocomplete="off" />
+      <button type="button" class="key-toggle" data-key-input="claudeKey">Show</button>
+    </div>
     <div class="hint">Get yours at console.anthropic.com</div>
   </div>
 
   <div class="field">
+    <label>Groq API Key <span style="color:#888">(for cleanup)</span></label>
+    <div class="key-input-row">
+      <input type="password" id="groqKey" placeholder="gsk_..." autocomplete="off" />
+      <button type="button" class="key-toggle" data-key-input="groqKey">Show</button>
+    </div>
+    <div class="hint">Get yours at console.groq.com</div>
+  </div>
+
+  <div class="field">
+    <label>Gemini API Key <span style="color:#888">(for cleanup)</span></label>
+    <div class="key-input-row">
+      <input type="password" id="geminiKey" placeholder="AIza..." autocomplete="off" />
+      <button type="button" class="key-toggle" data-key-input="geminiKey">Show</button>
+    </div>
+    <div class="hint">Get yours at aistudio.google.com</div>
+  </div>
+
+  <div class="field">
     <label>Deepgram API Key <span style="color:#888">(preferred STT)</span></label>
-    <input type="password" id="deepgramKey" placeholder="..." autocomplete="off" />
+    <div class="key-input-row">
+      <input type="password" id="deepgramKey" placeholder="..." autocomplete="off" />
+      <button type="button" class="key-toggle" data-key-input="deepgramKey">Show</button>
+    </div>
     <div class="hint">Get yours at console.deepgram.com</div>
   </div>
 
   <div class="field">
     <label>OpenAI API Key <span style="color:#888">(Whisper STT + GPT cleanup fallback)</span></label>
-    <input type="password" id="openaiKey" placeholder="sk-..." autocomplete="off" />
+    <div class="key-input-row">
+      <input type="password" id="openaiKey" placeholder="sk-..." autocomplete="off" />
+      <button type="button" class="key-toggle" data-key-input="openaiKey">Show</button>
+    </div>
     <div class="hint">Used if Deepgram key is not set</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Recording & Cleanup</div>
+
+  <div class="field">
+    <label for="cleanupProvider">Cleanup provider</label>
+    <select id="cleanupProvider">
+      <option value="auto">Auto</option>
+      <option value="ollama">Ollama</option>
+      <option value="groq">Groq</option>
+      <option value="claude">Claude</option>
+      <option value="openai">OpenAI</option>
+      <option value="gemini">Gemini</option>
+    </select>
+    <div class="hint">Auto tries available cloud providers, then Ollama.</div>
+  </div>
+
+  <div class="field">
+    <label for="micDeviceId">Microphone</label>
+    <div class="field-row">
+      <select id="micDeviceId">
+        <option value="">System default microphone</option>
+      </select>
+      <button type="button" class="refresh-button" id="refreshMics">Refresh</button>
+    </div>
+    <div class="hint">The system default is used if a saved microphone is unavailable.</div>
   </div>
 
   <div class="divider"></div>
@@ -205,6 +343,14 @@
   </div>
   <div class="hint" style="margin-top:8px">Hold the selected combination to record. Default: Ctrl + Win.</div>
 
+  <div class="divider"></div>
+
+  <div class="history-header">
+    <div class="section-label" style="margin-bottom:0">History</div>
+    <button type="button" class="history-clear" id="clearHistory">Clear all</button>
+  </div>
+  <div class="history-list" id="historyList"></div>
+
   <div class="footer">
     <span class="status" id="status">Saved!</span>
     <button class="btn-secondary" onclick="window.close()">Cancel</button>
@@ -212,11 +358,131 @@
   </div>
 
   <script>
+    function formatHistoryTime(time) {
+      const date = new Date(time);
+      return Number.isNaN(date.getTime()) ? 'Unknown time' : date.toLocaleString();
+    }
+
+    function renderHistory(history) {
+      const list = document.getElementById('historyList');
+      list.replaceChildren();
+
+      if (!Array.isArray(history) || history.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = 'No dictation history yet.';
+        list.appendChild(empty);
+        return;
+      }
+
+      history.forEach((entry) => {
+        const item = document.createElement('div');
+        item.className = 'history-entry';
+
+        const header = document.createElement('div');
+        header.className = 'history-entry-header';
+
+        const time = document.createElement('span');
+        time.className = 'history-time';
+        time.textContent = formatHistoryTime(entry?.time);
+
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'history-copy';
+        copy.textContent = 'Copy';
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(String(entry?.cleaned || ''));
+            copy.textContent = 'Copied';
+            setTimeout(() => { copy.textContent = 'Copy'; }, 1200);
+          } catch (error) {
+            copy.textContent = 'Copy failed';
+            setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
+          }
+        });
+
+        header.append(time, copy);
+        item.appendChild(header);
+
+        const rawLabel = document.createElement('div');
+        rawLabel.className = 'history-label';
+        rawLabel.textContent = 'Raw';
+        item.appendChild(rawLabel);
+
+        const raw = document.createElement('div');
+        raw.className = 'history-text';
+        raw.textContent = String(entry?.raw || '');
+        item.appendChild(raw);
+
+        const cleanedLabel = document.createElement('div');
+        cleanedLabel.className = 'history-label';
+        cleanedLabel.textContent = 'Cleaned';
+        item.appendChild(cleanedLabel);
+
+        const cleaned = document.createElement('div');
+        cleaned.className = 'history-text';
+        cleaned.textContent = String(entry?.cleaned || '');
+        item.appendChild(cleaned);
+
+        list.appendChild(item);
+      });
+    }
+
+    async function loadHistory() {
+      try {
+        const history = await window.settingsAPI.getHistory();
+        renderHistory(history);
+      } catch (error) {
+        renderHistory([]);
+      }
+    }
+
+    async function loadMicrophones(selectedDeviceId = '') {
+      const select = document.getElementById('micDeviceId');
+      select.replaceChildren();
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'System default microphone';
+      select.appendChild(defaultOption);
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const microphones = devices.filter((device) => device.kind === 'audioinput');
+        microphones.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Microphone ${index + 1}`;
+          select.appendChild(option);
+        });
+        select.value = Array.from(select.options).some((option) => option.value === selectedDeviceId)
+          ? selectedDeviceId
+          : '';
+      } catch (error) {
+        console.error('Unable to enumerate microphones:', error.name);
+        select.value = '';
+      }
+    }
+
+    function setupKeyToggles() {
+      document.querySelectorAll('.key-toggle').forEach((button) => {
+        button.addEventListener('click', () => {
+          const input = document.getElementById(button.dataset.keyInput);
+          const isHidden = input.type === 'password';
+          input.type = isHidden ? 'text' : 'password';
+          button.textContent = isHidden ? 'Hide' : 'Show';
+        });
+      });
+    }
+
     async function loadSettings() {
       const settings = await window.settingsAPI.getSettings();
       document.getElementById('claudeKey').value = settings.apiKeys?.claude || '';
+      document.getElementById('groqKey').value = settings.apiKeys?.groq || '';
+      document.getElementById('geminiKey').value = settings.apiKeys?.gemini || '';
       document.getElementById('deepgramKey').value = settings.apiKeys?.deepgram || '';
       document.getElementById('openaiKey').value = settings.apiKeys?.openai || '';
+      document.getElementById('cleanupProvider').value = settings.cleanupProvider || 'auto';
+      await loadMicrophones(settings.micDeviceId || '');
       document.getElementById('hkCtrl').checked = settings.hotkey?.ctrl ?? true;
       document.getElementById('hkShift').checked = settings.hotkey?.shift ?? false;
       document.getElementById('hkAlt').checked = settings.hotkey?.alt ?? false;
@@ -227,15 +493,19 @@
       const settings = {
         apiKeys: {
           claude: document.getElementById('claudeKey').value.trim(),
+          groq: document.getElementById('groqKey').value.trim(),
+          gemini: document.getElementById('geminiKey').value.trim(),
           deepgram: document.getElementById('deepgramKey').value.trim(),
           openai: document.getElementById('openaiKey').value.trim(),
         },
+        cleanupProvider: document.getElementById('cleanupProvider').value,
+        micDeviceId: document.getElementById('micDeviceId').value,
         hotkey: {
           ctrl: document.getElementById('hkCtrl').checked,
           shift: document.getElementById('hkShift').checked,
           alt: document.getElementById('hkAlt').checked,
           win: document.getElementById('hkWin').checked,
-        }
+        },
       };
 
       try {
@@ -244,7 +514,7 @@
         status.textContent = 'Saved!';
         status.className = 'status visible';
         setTimeout(() => status.classList.remove('visible'), 2000);
-      } catch (e) {
+      } catch (error) {
         const status = document.getElementById('status');
         status.textContent = 'Error saving';
         status.className = 'status visible error';
@@ -252,7 +522,18 @@
       }
     }
 
+    document.getElementById('refreshMics').addEventListener('click', () => {
+      loadMicrophones(document.getElementById('micDeviceId').value);
+    });
+
+    document.getElementById('clearHistory').addEventListener('click', async () => {
+      await window.settingsAPI.clearHistory();
+      renderHistory([]);
+    });
+
+    setupKeyToggles();
     loadSettings();
+    loadHistory();
   </script>
 </body>
 </html>

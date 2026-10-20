@@ -75,7 +75,18 @@ window.recorderAPI.onStart(async () => {
 
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const savedDeviceId = await window.recorderAPI.getMicDeviceId();
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const savedDeviceAvailable = savedDeviceId && devices.some(
+      (device) => device.kind === 'audioinput' && device.deviceId === savedDeviceId
+    );
+    const audio = savedDeviceAvailable ? { deviceId: { exact: savedDeviceId } } : true;
+
+    if (savedDeviceId && !savedDeviceAvailable) {
+      log('Saved microphone is unavailable – using system default');
+    }
+
+    stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
     activeStream = stream;
     const tracks = stream.getAudioTracks();
     log(`getUserMedia OK – ${tracks.length} audio track(s)`);

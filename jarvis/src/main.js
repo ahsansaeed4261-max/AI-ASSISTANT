@@ -68,7 +68,12 @@ const store = new Store({
       claude: '',
       openai: '',
       deepgram: '',
+      groq: '',
+      gemini: '',
     },
+    cleanupProvider: 'auto',
+    micDeviceId: '',
+    history: [],
     hotkey: {
       ctrl: true,
       shift: false,
@@ -102,7 +107,9 @@ function logKeyPresence(label) {
     `[JARVIS] ${label} – keys present:`,
     `deepgram=${!!k.deepgram}`,
     `openai=${!!k.openai}`,
-    `claude=${!!k.claude}`
+    `claude=${!!k.claude}`,
+    `groq=${!!k.groq}`,
+    `gemini=${!!k.gemini}`
   );
 }
 
@@ -155,7 +162,7 @@ function createSettingsWindow() {
 
   settingsWindow = new BrowserWindow({
     width: 450,
-    height: 420,
+    height: 700,
     resizable: false,
     minimizable: true,
     maximizable: false,
@@ -267,14 +274,32 @@ ipcMain.handle('get-settings', () => {
   return store.store;
 });
 
+ipcMain.handle('get-mic-device-id', () => store.get('micDeviceId') || '');
+
+ipcMain.handle('get-history', () => {
+  const history = store.get('history');
+  return Array.isArray(history) ? history : [];
+});
+
+ipcMain.handle('clear-history', () => {
+  store.set('history', []);
+  return true;
+});
+
 ipcMain.handle('save-settings', (event, settings) => {
-  // Ensure field names match exactly what getApiKeys() reads:
-  //   settings.apiKeys = { claude, openai, deepgram }
+  // Ensure field names match exactly what getApiKeys() reads.
   store.set('apiKeys', {
     claude:   (settings.apiKeys?.claude   || '').trim(),
     openai:   (settings.apiKeys?.openai   || '').trim(),
     deepgram: (settings.apiKeys?.deepgram || '').trim(),
+    groq:     (settings.apiKeys?.groq     || '').trim(),
+    gemini:   (settings.apiKeys?.gemini   || '').trim(),
   });
+
+  const cleanupProviders = new Set(['auto', 'ollama', 'groq', 'claude', 'openai', 'gemini']);
+  const cleanupProvider = String(settings.cleanupProvider || 'auto').trim().toLowerCase();
+  store.set('cleanupProvider', cleanupProviders.has(cleanupProvider) ? cleanupProvider : 'auto');
+  store.set('micDeviceId', typeof settings.micDeviceId === 'string' ? settings.micDeviceId : '');
   store.set('hotkey', settings.hotkey);
   logKeyPresence('after save');
   return true;

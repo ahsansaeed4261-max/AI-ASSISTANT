@@ -51,12 +51,28 @@ async function cleanup(transcript, apiKeys = {}) {
     { name: 'ollama', enabled: true,          run: () => cleanupOllama(transcript) },
   ];
 
-  const forced = (process.env.LLM_PROVIDER || '').trim().toLowerCase();
+  let forced = '';
+  try {
+    const { store } = require('./main');
+    const hasSavedProvider = typeof store.has === 'function' && store.has('cleanupProvider');
+    const savedProvider = hasSavedProvider
+      ? String(store.get('cleanupProvider') || '').trim().toLowerCase()
+      : '';
+
+    // An explicitly saved "auto" selection uses the normal chain. Older
+    // stores without this setting may still use the environment override.
+    if (savedProvider && savedProvider !== 'auto') forced = savedProvider;
+    if (!savedProvider) forced = (process.env.LLM_PROVIDER || '').trim().toLowerCase();
+  } catch (error) {
+    console.warn('[cleanup] Unable to read saved cleanup provider; using environment setting');
+    forced = (process.env.LLM_PROVIDER || '').trim().toLowerCase();
+  }
+
   let chain = all.filter((p) => p.enabled);
-  if (forced) {
+  if (forced && forced !== 'auto') {
     const only = all.filter((p) => p.name === forced && p.enabled);
     if (only.length) chain = only;
-    else console.warn(`[cleanup] LLM_PROVIDER='${forced}' is unknown or has no key – using default order`);
+    else console.warn(`[cleanup] cleanup provider '${forced}' is unknown or has no key – using default order`);
   }
 
   const errors = [];
