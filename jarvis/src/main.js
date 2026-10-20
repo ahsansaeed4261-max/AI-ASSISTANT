@@ -180,6 +180,7 @@ function createOverlayWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   overlayWindow = new BrowserWindow({
+    title: 'JARVIS Overlay',
     width: 210,
     height: 52,
     x: Math.round((width - 210) / 2),
@@ -201,6 +202,7 @@ function createOverlayWindow() {
   });
 
   overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
+  overlayWindow.on('page-title-updated', (e) => e.preventDefault());
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   console.log('[JARVIS] Overlay window created');
 }
@@ -240,14 +242,21 @@ function createRecorderWindow() {
 
 // ── Overlay helper (called by pipeline.js) ───────────────────────────────────
 
-function showOverlay(state) {
+let overlayTimer = null;
+
+function showOverlay(state, text) {
+  console.log('[overlay] showOverlay:', state, overlayWindow ? 'window ok' : 'NO WINDOW');
   if (!overlayWindow) return;
-  if (state === 'recording' || state === 'thinking') {
-    overlayWindow.webContents.send('update-state', { state });
-    overlayWindow.show();
+  clearTimeout(overlayTimer);
+  if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error') {
+    overlayWindow.webContents.send('update-state', { state, text });
+    overlayWindow.showInactive();
+    if (state === 'done' || state === 'error') {
+      overlayTimer = setTimeout(() => showOverlay('hide'), state === 'error' ? 3500 : 1200);
+    }
   } else {
     overlayWindow.webContents.send('update-state', { state: 'hide' });
-    setTimeout(() => { if (overlayWindow) overlayWindow.hide(); }, 600);
+    overlayTimer = setTimeout(() => { if (overlayWindow) overlayWindow.hide(); }, 600);
   }
 }
 
@@ -294,10 +303,8 @@ app.whenReady().then(() => {
 
   createTray();
 
-  // Overlay pill is only useful on Windows; on Linux we use notify-send
-  if (process.platform !== 'linux') {
-    createOverlayWindow();
-  }
+  // Overlay pill is created on every platform
+  createOverlayWindow();
 
   createRecorderWindow();
 

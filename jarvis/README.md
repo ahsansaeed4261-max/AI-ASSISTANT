@@ -107,3 +107,4 @@ Paste into active window → Restore previous clipboard
 ## License
 
 MIT – Build what you want with it.
+# AI-ASSISTANT

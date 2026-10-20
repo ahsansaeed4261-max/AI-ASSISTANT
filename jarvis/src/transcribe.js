@@ -13,15 +13,7 @@ const TIMEOUT_MS = 30_000;
 
 // ── Notification helper (Linux) ───────────────────────────────────────────────
 
-function notify(title, body) {
-  if (process.platform !== 'linux') return;
-  try {
-    execSync(`notify-send ${JSON.stringify(title)} ${JSON.stringify(body)}`, {
-      timeout: 2000,
-      stdio: 'ignore',
-    });
-  } catch (_) {}
-}
+const notify = require('./notify');
 
 // ── Main entry ────────────────────────────────────────────────────────────────
 
@@ -210,107 +202,6 @@ async function transcribeWhisper(base64audio, apiKey) {
   const transcript = json.text ?? '';
   console.log(`[transcribe] Whisper done – transcript length: ${transcript.length} chars`);
   return transcript;
-}
-
-module.exports = transcribe;
-
-
-// ── Deepgram ────────────────────────────────────────────────────────────────
-
-async function transcribeDeepgram(base64wav, apiKey) {
-  const audioBuffer = Buffer.from(base64wav, 'base64');
-
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'api.deepgram.com',
-      path: '/v1/listen?model=nova-2&smart_format=true',
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'audio/wav',
-        'Content-Length': audioBuffer.length,
-      },
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.err_msg) {
-            reject(new Error(`Deepgram error: ${json.err_msg}`));
-            return;
-          }
-          const transcript =
-            json?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? '';
-          resolve(transcript);
-        } catch (e) {
-          reject(new Error(`Deepgram parse error: ${e.message}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(audioBuffer);
-    req.end();
-  });
-}
-
-// ── OpenAI Whisper ──────────────────────────────────────────────────────────
-
-async function transcribeWhisper(base64wav, apiKey) {
-  const audioBuffer = Buffer.from(base64wav, 'base64');
-
-  // Build multipart/form-data manually (no external deps)
-  const boundary = '----JARVISFormBoundary' + Date.now().toString(16);
-  const filename = 'audio.wav';
-  const contentType = 'audio/wav';
-
-  const partHeader = Buffer.from(
-    `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-      `Content-Type: ${contentType}\r\n\r\n`
-  );
-  const modelPart = Buffer.from(
-    `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n--${boundary}--\r\n`
-  );
-
-  const body = Buffer.concat([partHeader, audioBuffer, modelPart]);
-
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'api.openai.com',
-      path: '/v1/audio/transcriptions',
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': body.length,
-      },
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.error) {
-            reject(new Error(`Whisper error: ${json.error.message}`));
-            return;
-          }
-          resolve(json.text ?? '');
-        } catch (e) {
-          reject(new Error(`Whisper parse error: ${e.message}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
 }
 
 module.exports = transcribe;

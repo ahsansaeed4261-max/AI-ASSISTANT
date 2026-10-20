@@ -14,19 +14,12 @@ const { execSync } = require('child_process');
 
 // ── Notification helper ───────────────────────────────────────────────────────
 
-function notify(title, body) {
-  if (process.platform !== 'linux') return;
-  try {
-    execSync(`notify-send ${JSON.stringify(title)} ${JSON.stringify(body)}`, {
-      timeout: 2000,
-      stdio: 'ignore',
-    });
-  } catch (_) {}
-}
+const notify = require('./notify');
 
 // ── Feedback: overlay (Windows) + notify-send (Linux) ────────────────────────
 
-function feedback(state) {
+function feedback(state, text) {
+  try { showOverlay(state, text); } catch (e) { console.error('[overlay] failed:', e.message); }
   if (process.platform === 'linux') {
     if (state === 'recording') {
       console.log('[pipeline] feedback: Listening...');
@@ -40,7 +33,7 @@ function feedback(state) {
     }
     // 'hide' is a no-op on Linux
   } else {
-    showOverlay(state === 'done' ? 'hide' : state);
+    // overlay is driven at the top of feedback()
   }
 }
 
@@ -119,14 +112,14 @@ async function stopRecording() {
   } catch (err) {
     console.error('[pipeline] Stage 1 FAILED (get audio):', err.message);
     notify('JARVIS – Error', err.message);
-    feedback('hide');
+    feedback('error', String(err.message).slice(0, 60));
     return;
   }
 
   if (!base64audio || base64audio.length === 0) {
     console.error('[pipeline] Stage 1: empty audio received – nothing to transcribe');
     notify('JARVIS – Error', 'No audio captured. Check microphone permissions.');
-    feedback('hide');
+    feedback('error', String('No audio captured. Check microphone permissions.').slice(0, 60));
     return;
   }
   console.log(`[pipeline] Stage 1 done – audio: ${base64audio.length} base64 chars`);
@@ -139,14 +132,14 @@ async function stopRecording() {
   } catch (err) {
     console.error('[pipeline] Stage 2 FAILED (transcribe):', err.message);
     notify('JARVIS – Transcription failed', err.message.slice(0, 100));
-    feedback('hide');
+    feedback('error', String(err.message.slice(0, 100)).slice(0, 60));
     return;
   }
 
   if (!transcript || !transcript.trim()) {
     console.log('[pipeline] Stage 2: empty transcript – nothing to clean');
     notify('JARVIS', 'Nothing transcribed – try speaking more clearly.');
-    feedback('hide');
+    feedback('error', String('Nothing transcribed – try speaking more clearly.').slice(0, 60));
     return;
   }
   console.log('[pipeline] Stage 2 done – transcript:', transcript);
@@ -159,7 +152,7 @@ async function stopRecording() {
   } catch (err) {
     console.error('[pipeline] Stage 3 FAILED (cleanup):', err.message);
     notify('JARVIS – Cleanup failed', err.message.slice(0, 100));
-    feedback('hide');
+    feedback('error', String(err.message.slice(0, 100)).slice(0, 60));
     return;
   }
   console.log('[pipeline] Stage 3 done – cleaned:', cleaned);
@@ -171,7 +164,7 @@ async function stopRecording() {
   } catch (err) {
     console.error('[pipeline] Stage 4 FAILED (paste):', err.message);
     notify('JARVIS – Paste failed', err.message.slice(0, 100));
-    feedback('hide');
+    feedback('error', String(err.message.slice(0, 100)).slice(0, 60));
     return;
   }
   console.log('[pipeline] Stage 4 done – paste complete');

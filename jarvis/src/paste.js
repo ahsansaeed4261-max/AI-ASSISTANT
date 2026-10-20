@@ -17,7 +17,7 @@
 'use strict';
 
 const { clipboard } = require('electron');
-const { spawnSync, execSync } = require('child_process');
+const { spawn, spawnSync, execSync } = require('child_process');
 
 const IS_LINUX = process.platform === 'linux';
 
@@ -46,48 +46,51 @@ function commandExists(cmd) {
 
 // ── Linux (Wayland) ───────────────────────────────────────────────────────────
 
-async function pasteLinux(text) {
-  // ── 1. wl-copy: put text on the Wayland clipboard ──────────────────────────
-  if (!commandExists('wl-copy')) {
-    console.error(
-      '[paste] ERROR: wl-copy not found. Install wl-clipboard:\n' +
-      '  sudo pacman -S wl-clipboard   # Arch / Hyprland\n' +
-      '  sudo apt install wl-clipboard # Debian/Ubuntu'
-    );
-  } else {
-    // Spawn with an argv array – text is never interpreted as shell syntax
-    const cp = spawnSync('wl-copy', ['--', text], { timeout: 3000 });
-    if (cp.error) {
-      console.error('[paste] wl-copy failed:', cp.error.message);
-    } else {
-      console.log('[paste] wl-copy: clipboard set');
-    }
-  }
+function setClipboard(text) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('wl-copy', [], { stdio: ['pipe', 'ignore', 'ignore'] });
+    const timer = setTimeout(() => reject(new Error('wl-copy timed out')), 3000);
+    child.on('error', (e) => { clearTimeout(timer); reject(e); });
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error('wl-copy exited with code ' + code));
+    });
+    child.stdin.on('error', () => {});
+    child.stdin.end(text);
+  });
+}
 
-  // ── 2. wtype: type the text into the focused window ────────────────────────
-  if (!commandExists('wtype')) {
-    console.error(
-      '[paste] ERROR: wtype not found. Install wtype:\n' +
-      '  sudo pacman -S wtype          # Arch / Hyprland\n' +
-      '  # or build from: https://github.com/atx/wtype'
-    );
-    console.log('[paste] Fallback: text is on clipboard – paste manually with Ctrl+V');
+async function pasteLinux(text) {
+  if (!commandExists('wl-copy') || !commandExists('wtype')) {
+    console.error('[paste] ERROR: wl-clipboard and wtype are both required');
     return;
   }
 
-  // Small delay so the focused window is ready
-  await sleep(80);
+  try {
+    await setClipboard(text);
+    console.log('[paste] wl-copy: clipboard set');
+  } catch (e) {
+    console.error('[paste] wl-copy failed:', e.message);
+    return;
+  }
 
-  // argv array: wtype -- "<text>"
-  // '--' tells wtype to treat everything after as literal text
-  const wt = spawnSync('wtype', ['--', text], { timeout: 5000 });
+  // Give the compositor a moment to register the new clipboard owner
+  await sleep(150);
+
+  // Ctrl+V by default. Terminals need Ctrl+Shift+V: set JARVIS_PASTE_SHIFT=1 in .env
+  const useShift = process.env.JARVIS_PASTE_SHIFT === '1';
+  const args = useShift
+    ? ['-M', 'ctrl', '-M', 'shift', '-k', 'v', '-m', 'shift', '-m', 'ctrl']
+    : ['-M', 'ctrl', '-k', 'v', '-m', 'ctrl'];
+
+  const wt = spawnSync('wtype', args, { timeout: 3000 });
   if (wt.error) {
     console.error('[paste] wtype failed:', wt.error.message);
   } else if (wt.status !== 0) {
-    console.error('[paste] wtype exited with code', wt.status,
-      wt.stderr ? wt.stderr.toString().trim() : '');
+    console.error('[paste] wtype exited with code', wt.status, wt.stderr ? wt.stderr.toString().trim() : '');
   } else {
-    console.log('[paste] wtype: text typed successfully');
+    console.log('[paste] sent paste shortcut');
   }
 }
 
