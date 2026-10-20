@@ -58,6 +58,7 @@
 
   .pill.done .dot  { background: #3ddc84; animation: none; }
   .pill.error .dot { background: #ff4444; animation: none; }
+  .pill.confirm .dot { background: #f0b429; animation: pulse-blue 1s ease-in-out infinite; }
 
   @keyframes pulse-red {
     0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
@@ -94,6 +95,9 @@
       } else if (state === 'thinking') {
         pill.className = 'pill thinking visible';
         label.textContent = 'Thinking...';
+      } else if (state === 'confirm') {
+        pill.className = 'pill confirm visible';
+        label.textContent = text || 'Confirm command';
       } else if (state === 'done') {
         pill.className = 'pill done visible';
         label.textContent = text || 'Done';

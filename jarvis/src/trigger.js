@@ -27,6 +27,7 @@ function getPipeline() {
 // ── Recording state (shared between Windows hotkey and Linux argv handler) ──
 
 let _recording = false;
+let _commandRecording = false;
 let _openSettings = null;  // set by init(), called on --settings
 
 function isRecording() { return _recording; }
@@ -60,6 +61,29 @@ async function handleArgv(argv) {
     } catch (err) {
       process.stderr.write(JSON.stringify({ ok: false, error: err.message }) + '\n');
       console.error('[trigger] --action failed:', err.message);
+    }
+    return;
+  }
+
+  // ── command mode ─────────────────────────────────────────────────────────
+  if (argv.includes('--command-confirm')) {
+    await getPipeline().confirmCommand().catch((err) => console.error('[trigger] command confirm error:', err.message));
+    return;
+  }
+  if (argv.includes('--command-cancel')) {
+    getPipeline().cancelCommand();
+    return;
+  }
+  if (argv.includes('--command-toggle')) {
+    if (_commandRecording) {
+      _commandRecording = false;
+      await getPipeline().stopCommandRecording().catch((err) => console.error('[trigger] command error:', err.message));
+    } else {
+      _commandRecording = true;
+      await getPipeline().startCommandRecording().catch((err) => {
+        console.error('[trigger] command start error:', err.message);
+        _commandRecording = false;
+      });
     }
     return;
   }

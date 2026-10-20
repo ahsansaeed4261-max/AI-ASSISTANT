@@ -10,7 +10,7 @@ const { showOverlay, getApiKeys, store } = require('./main');
 const transcribe = require('./transcribe');
 const cleanup = require('./cleanup');
 const paste = require('./paste');
-const { execSync } = require('child_process');
+const command = require('./command');
 
 // ── Notification helper ───────────────────────────────────────────────────────
 
@@ -89,6 +89,19 @@ async function startRecording() {
   feedback('recording');
   win.webContents.send('recorder-start');
   console.log('[pipeline] recording started');
+}
+
+async function transcribeRecording() {
+  const win = getRecorderWindow();
+  if (!win) throw new Error('Recorder window not found');
+
+  const audioPromise = waitForAudio(30_000);
+  win.webContents.send('recorder-stop');
+  const base64audio = await audioPromise;
+  if (!base64audio) throw new Error('No audio captured. Check microphone permissions.');
+  const transcript = await transcribe(base64audio, getApiKeys());
+  if (!transcript || !transcript.trim()) throw new Error('Nothing transcribed – try speaking more clearly.');
+  return transcript.trim();
 }
 
 async function stopRecording() {
@@ -183,5 +196,29 @@ async function stopRecording() {
   setTimeout(() => feedback('hide'), 1500);
 }
 
-module.exports = { startRecording, stopRecording };
+async function startCommandRecording() {
+  return startRecording();
+}
+
+async function stopCommandRecording() {
+  const transcript = await transcribeRecording();
+  return command.processTranscript(transcript);
+}
+
+async function confirmCommand() {
+  return command.confirmPendingCommand();
+}
+
+function cancelCommand() {
+  return command.cancelPendingCommand();
+}
+
+module.exports = {
+  startRecording,
+  stopRecording,
+  startCommandRecording,
+  stopCommandRecording,
+  confirmCommand,
+  cancelCommand,
+};
 

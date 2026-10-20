@@ -41,6 +41,7 @@ const ACTIONS = [
   // ── open_app ──────────────────────────────────────────────────────────────
   {
     name: 'open_app',
+    risk: 'safe',
     description: 'Launch an application by its executable name or .desktop name.',
     params: {
       app: { type: 'string', description: 'Executable name or .desktop app ID (e.g. "firefox", "org.gnome.Nautilus")', required: true },
@@ -65,6 +66,7 @@ const ACTIONS = [
   // ── open_url ──────────────────────────────────────────────────────────────
   {
     name: 'open_url',
+    risk: 'safe',
     description: 'Open a URL in the default browser.',
     params: {
       url: { type: 'string', description: 'Full URL including scheme', required: true },
@@ -85,6 +87,7 @@ const ACTIONS = [
   // ── web_search ────────────────────────────────────────────────────────────
   {
     name: 'web_search',
+    risk: 'safe',
     description: 'Open a web search in the default browser.',
     params: {
       query:  { type: 'string', description: 'Search query',                    required: true  },
@@ -110,6 +113,7 @@ const ACTIONS = [
   // ── media_control ─────────────────────────────────────────────────────────
   {
     name: 'media_control',
+    risk: 'interactive',
     description: 'Control media playback (play/pause, next, previous, volume up/down).',
     params: {
       command: {
@@ -157,6 +161,7 @@ const ACTIONS = [
   // ── type_text ─────────────────────────────────────────────────────────────
   {
     name: 'type_text',
+    risk: 'interactive',
     description: 'Type text into the currently focused window using wtype (Wayland).',
     params: {
       text:  { type: 'string', description: 'Text to type',              required: true  },
@@ -206,28 +211,17 @@ const registry = new Map(ACTIONS.map((a) => [a.name, a]));
  * @returns {Promise<object>} result object
  */
 async function runAction(jsonStr) {
-  // Log the raw string exactly once so the user can see what arrived
-  console.log('[actions] raw --action value:', jsonStr);
-
   let payload;
   try {
     payload = JSON.parse(jsonStr);
   } catch (e) {
-    throw new Error(
-      `--action value is not valid JSON.\n` +
-      `  Received : ${jsonStr}\n` +
-      `  Parse error: ${e.message}`
-    );
+    throw new Error(`--action value is not valid JSON: ${e.message}`);
   }
 
   // Resolve action name: prefer `action` key, fall back to `name` key
   const actionName = payload.action || payload.name;
   if (!actionName) {
-    throw new Error(
-      `--action JSON must have an "action" field.\n` +
-      `  Example: {"action":"open_app","app":"firefox"}\n` +
-      `  Received: ${jsonStr}`
-    );
+    throw new Error('--action JSON must have an "action" field.');
   }
 
   const action = registry.get(actionName);
@@ -250,17 +244,21 @@ async function runAction(jsonStr) {
     delete params.name;
   }
 
-  console.log(`[actions] running '${actionName}' params=${JSON.stringify(params)}`);
+  console.log(`[actions] running '${actionName}'`);
   const result = await action.run(params);
-  console.log(`[actions] '${actionName}' done:`, JSON.stringify(result));
+  console.log(`[actions] '${actionName}' done`);
   return result;
 }
 
 /**
  * Return the full list of actions with name, description and params.
  */
+function getRisk(name) {
+  return registry.get(name)?.risk || 'destructive';
+}
+
 function listActions() {
   return ACTIONS.map(({ name, description, params }) => ({ name, description, params }));
 }
 
-module.exports = { runAction, listActions, registry };
+module.exports = { runAction, listActions, getRisk, registry };

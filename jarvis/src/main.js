@@ -255,7 +255,7 @@ function showOverlay(state, text) {
   console.log('[overlay] showOverlay:', state, overlayWindow ? 'window ok' : 'NO WINDOW');
   if (!overlayWindow) return;
   clearTimeout(overlayTimer);
-  if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error') {
+  if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error' || state === 'confirm') {
     overlayWindow.webContents.send('update-state', { state, text });
     overlayWindow.showInactive();
     if (state === 'done' || state === 'error') {
