@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <!--
+    media-src * lets MediaRecorder use the mic stream.
+    blob: is needed for Blob URLs if we ever preview audio.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline'; media-src * blob:;" />
+</head>
+<body>
+<script>
+'use strict';
+
+// ── Debug helpers ─────────────────────────────────────────────────────────────
+// All console.* calls here are forwarded to the terminal by main.js via
+// the 'console-message' webContents event.
+
+function log(...args)  { console.log('[recorder]',  ...args); }
+function err(...args)  { console.error('[recorder]', ...args); }
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let mediaRecorder = null;
+let chunks        = [];
+let activeStream  = null;
+
+// ── Choose a supported MIME type ──────────────────────────────────────────────
+
+function pickMimeType() {
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+  ];
+  for (const mime of candidates) {
+    if (MediaRecorder.isTypeSupported(mime)) {
+      log('Using MIME type:', mime);
+      return mime;
+    }
+  }
+  log('No preferred MIME type supported – using browser default');
+  return '';   // empty string → browser picks
+}
+
+// ── Enumerate devices (diagnostic, runs once) ────────────────────────────────
+
+async function logDevices() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === 'audioinput');
+    log(`enumerateDevices: ${mics.length} audio input(s) found`);
+    mics.forEach((d, i) => log(`  [${i}] ${d.label || '(no label – permission pending)'} id=${d.deviceId}`));
+  } catch (e) {
+    err('enumerateDevices failed:', e.name, e.message);
+  }
+}
+
+// ── Signal ready ──────────────────────────────────────────────────────────────
+
+log('Renderer loaded, signalling ready');
+window.recorderAPI.signalReady();
+logDevices();
+
+// ── Start recording ───────────────────────────────────────────────────────────
+
+window.recorderAPI.onStart(async () => {
+  log('onStart received');
+  chunks = [];
+
+  // Enumerate again after permission so labels appear
+  await logDevices();
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    activeStream = stream;
+    const tracks = stream.getAudioTracks();
+    log(`getUserMedia OK – ${tracks.length} audio track(s)`);
+    tracks.forEach((t, i) => log(`  track[${i}]: ${t.label}, enabled=${t.enabled}, readyState=${t.readyState}`));
+  } catch (e) {
+    err(`getUserMedia FAILED – ${e.name}: ${e.message}`);
+    window.recorderAPI.sendAudio('');
+    return;
+  }
+
+  const mimeType = pickMimeType();
+  try {
+    mediaRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+  } catch (e) {
+    err(`new MediaRecorder FAILED – ${e.name}: ${e.message}`);
+    stream.getTracks().forEach(t => t.stop());
+    window.recorderAPI.sendAudio('');
+    return;
+  }
+
+  mediaRecorder.ondataavailable = (e) => {
+    log(`ondataavailable: size=${e.data ? e.data.size : 'null'}`);
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  mediaRecorder.onerror = (e) => {
+    err('MediaRecorder error:', e.error ? e.error.message : e);
+  };
+
+  mediaRecorder.onstop = async () => {
+    log(`onstop: ${chunks.length} chunk(s) collected`);
+
+    // Release the microphone
+    stream.getTracks().forEach(t => t.stop());
+    activeStream = null;
+
+    if (chunks.length === 0) {
+      err('No chunks collected – sending empty audio');
+      window.recorderAPI.sendAudio('');
+      return;
+    }
+
+    const usedMime = mediaRecorder.mimeType || 'audio/webm';
+    const blob = new Blob(chunks, { type: usedMime });
+    log(`Blob created: size=${blob.size} type=${blob.type}`);
+
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      // btoa on large buffers can stack-overflow; use a safe loop
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      const CHUNK = 8192;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      const base64 = btoa(binary);
+      log(`Sending audio: ${base64.length} base64 chars`);
+      window.recorderAPI.sendAudio(base64);
+    } catch (e) {
+      err(`Blob → base64 FAILED – ${e.name}: ${e.message}`);
+      window.recorderAPI.sendAudio('');
+    }
+  };
+
+  // 250 ms timeslice so chunks arrive regularly and we don't lose data
+  // if stop() is called between slices.
+  mediaRecorder.start(250);
+  log(`MediaRecorder.start(250) called – state=${mediaRecorder.state}`);
+});
+
+// ── Stop recording ────────────────────────────────────────────────────────────
+
+window.recorderAPI.onStop(() => {
+  log(`onStop received – mediaRecorder state=${mediaRecorder ? mediaRecorder.state : 'null'}`);
+
+  if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+    err('onStop: recorder not active, sending empty audio');
+    window.recorderAPI.sendAudio('');
+    return;
+  }
+
+  // mediaRecorder.stop() triggers ondataavailable for the final chunk,
+  // then fires onstop. The IPC send happens inside onstop, so we just
+  // call stop() here and let the event chain complete.
+  mediaRecorder.stop();
+  log('mediaRecorder.stop() called');
+});
+</script>
+</body>
+</html>
