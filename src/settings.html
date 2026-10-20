@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline';" />
+  <title>JARVIS Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #e8e8e8;
+      padding: 24px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h1 .subtitle {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      margin: 16px 0;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #aaa;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      background: #2a2a2a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #e8e8e8;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: 'Courier New', monospace;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #4a9eff;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .hotkey-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .hotkey-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #2a2a2a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .hotkey-chip input[type="checkbox"] {
+      accent-color: #4a9eff;
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    button {
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .btn-secondary {
+      background: #2a2a2a;
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .btn-secondary:hover { background: #333; }
+
+    .btn-primary {
+      background: #4a9eff;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #3a8eee; }
+
+    .status {
+      font-size: 12px;
+      color: #4caf50;
+      align-self: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status.visible { opacity: 1; }
+    .status.error { color: #ff5555; }
+  </style>
+</head>
+<body>
+  <h1>JARVIS <span class="subtitle">Voice Dictation</span></h1>
+
+  <div class="divider"></div>
+
+  <div class="section-label">API Keys</div>
+
+  <div class="field">
+    <label>Claude API Key <span style="color:#888">(for cleanup)</span></label>
+    <input type="password" id="claudeKey" placeholder="sk-ant-..." autocomplete="off" />
+    <div class="hint">Get yours at console.anthropic.com</div>
+  </div>
+
+  <div class="field">
+    <label>Deepgram API Key <span style="color:#888">(preferred STT)</span></label>
+    <input type="password" id="deepgramKey" placeholder="..." autocomplete="off" />
+    <div class="hint">Get yours at console.deepgram.com</div>
+  </div>
+
+  <div class="field">
+    <label>OpenAI API Key <span style="color:#888">(Whisper STT + GPT cleanup fallback)</span></label>
+    <input type="password" id="openaiKey" placeholder="sk-..." autocomplete="off" />
+    <div class="hint">Used if Deepgram key is not set</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Hotkey</div>
+
+  <div class="hotkey-row">
+    <label class="hotkey-chip">
+      <input type="checkbox" id="hkCtrl" /> Ctrl
+    </label>
+    <label class="hotkey-chip">
+      <input type="checkbox" id="hkShift" /> Shift
+    </label>
+    <label class="hotkey-chip">
+      <input type="checkbox" id="hkAlt" /> Alt
+    </label>
+    <label class="hotkey-chip">
+      <input type="checkbox" id="hkWin" /> Win/Cmd
+    </label>
+  </div>
+  <div class="hint" style="margin-top:8px">Hold the selected combination to record. Default: Ctrl + Win.</div>
+
+  <div class="footer">
+    <span class="status" id="status">Saved!</span>
+    <button class="btn-secondary" onclick="window.close()">Cancel</button>
+    <button class="btn-primary" onclick="saveSettings()">Save</button>
+  </div>
+
+  <script>
+    async function loadSettings() {
+      const settings = await window.settingsAPI.getSettings();
+      document.getElementById('claudeKey').value = settings.apiKeys?.claude || '';
+      document.getElementById('deepgramKey').value = settings.apiKeys?.deepgram || '';
+      document.getElementById('openaiKey').value = settings.apiKeys?.openai || '';
+      document.getElementById('hkCtrl').checked = settings.hotkey?.ctrl ?? true;
+      document.getElementById('hkShift').checked = settings.hotkey?.shift ?? false;
+      document.getElementById('hkAlt').checked = settings.hotkey?.alt ?? false;
+      document.getElementById('hkWin').checked = settings.hotkey?.win ?? true;
+    }
+
+    async function saveSettings() {
+      const settings = {
+        apiKeys: {
+          claude: document.getElementById('claudeKey').value.trim(),
+          deepgram: document.getElementById('deepgramKey').value.trim(),
+          openai: document.getElementById('openaiKey').value.trim(),
+        },
+        hotkey: {
+          ctrl: document.getElementById('hkCtrl').checked,
+          shift: document.getElementById('hkShift').checked,
+          alt: document.getElementById('hkAlt').checked,
+          win: document.getElementById('hkWin').checked,
+        }
+      };
+
+      try {
+        await window.settingsAPI.saveSettings(settings);
+        const status = document.getElementById('status');
+        status.textContent = 'Saved!';
+        status.className = 'status visible';
+        setTimeout(() => status.classList.remove('visible'), 2000);
+      } catch (e) {
+        const status = document.getElementById('status');
+        status.textContent = 'Error saving';
+        status.className = 'status visible error';
+        setTimeout(() => status.classList.remove('visible'), 3000);
+      }
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>

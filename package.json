@@ -1,0 +1,30 @@
+{
+  "name": "jarvis",
+  "version": "1.0.0",
+  "description": "JARVIS - Voice dictation tool for the system tray",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "dotenv": "^16.4.5",
+    "electron-store": "^8.1.0",
+    "form-data": "^4.0.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.47.0",
+    "uiohook-napi": "^1.5.3"
+  },
+  "devDependencies": {
+    "electron": "^30.5.1"
+  },
+  "build": {
+    "appId": "com.jarvis.dictation",
+    "productName": "JARVIS"
+  },
+  "allowScripts": {
+    "electron@30.5.1": true,
+    "uiohook-napi@1.5.5": true
+  }
+}
