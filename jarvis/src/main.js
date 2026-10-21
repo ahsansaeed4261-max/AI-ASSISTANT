@@ -187,14 +187,14 @@ function createSettingsWindow() {
 // ── Overlay window ────────────────────────────────────────────────────────────
 
 function createOverlayWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const { width } = screen.getPrimaryDisplay().workAreaSize;
 
   overlayWindow = new BrowserWindow({
     title: 'JARVIS Overlay',
-    width: 210,
-    height: 52,
-    x: Math.round((width - 210) / 2),
-    y: height - 88,
+    width: 520,
+    height: 220,
+    x: Math.round((width - 520) / 2),
+    y: 0,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -259,7 +259,14 @@ function showOverlay(state, text) {
   if (!overlayWindow) return;
   clearTimeout(overlayTimer);
   if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error' || state === 'confirm') {
-    overlayWindow.webContents.send('update-state', { state, text });
+    const payload = { state, text };
+    const pending = state === 'confirm' ? require('./command').currentPendingCommand() : null;
+    if (pending) {
+      payload.summary = pending.summary;
+      payload.action = pending.action;
+      payload.params = pending.params;
+    }
+    overlayWindow.webContents.send('update-state', payload);
     overlayWindow.showInactive();
     if (state === 'done' || state === 'error') {
       overlayTimer = setTimeout(() => showOverlay('hide'), state === 'error' ? 3500 : 1200);

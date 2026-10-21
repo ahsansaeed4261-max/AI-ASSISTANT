@@ -4,109 +4,119 @@
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0b0d1a;
+    --accent: #a9d6a0;
+    --warm: #ff8a3d;
+    --danger: #ff5c5c;
+    --text: #eef0f6;
+    --text-dim: rgba(238, 240, 246, 0.55);
+  }
 
-  body {
-    background: transparent;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    display: flex;
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: transparent; font-family: system-ui, sans-serif; }
+  .island {
     align-items: center;
+    background: rgba(11, 13, 26, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+    color: var(--text);
+    display: flex;
+    height: 44px;
     justify-content: center;
-    height: 100vh;
-    width: 100vw;
-  }
-
-  .pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(20, 20, 20, 0.88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    padding: 8px 16px;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-    transition: opacity 0.3s ease;
-    opacity: 0;
-    user-select: none;
-    pointer-events: none;
-  }
-
-  .pill.visible { opacity: 1; }
-  .pill.fade-out { opacity: 0; }
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #ff4444;
-    flex-shrink: 0;
-  }
-
-  .pill.recording .dot { animation: pulse-red 1.2s ease-in-out infinite; }
-
-  .pill.thinking .dot {
-    background: #4a9eff;
-    animation: pulse-blue 1s ease-in-out infinite;
-  }
-
-  .pill.done .dot  { background: #3ddc84; animation: none; }
-  .pill.error .dot { background: #ff4444; animation: none; }
-  .pill.confirm .dot { background: #f0b429; animation: pulse-blue 1s ease-in-out infinite; }
-
-  @keyframes pulse-red {
-    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
-    50% { transform: scale(1.3); opacity: 0.9; box-shadow: 0 0 0 6px rgba(255, 68, 68, 0); }
-  }
-
-  @keyframes pulse-blue {
-    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(74, 158, 255, 0.7); }
-    50% { transform: scale(1.2); opacity: 0.9; box-shadow: 0 0 0 5px rgba(74, 158, 255, 0); }
-  }
-
-  .label {
-    white-space: nowrap;
-    max-width: 320px;
+    margin: 0 auto;
     overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 0 20px;
+    transform: translateY(-110%);
+    transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+    width: 220px;
+  }
+  .island.visible { transform: translateY(0); }
+  .island.confirm { align-items: stretch; height: 130px; justify-content: flex-start; padding: 20px 28px; width: 440px; }
+  .state-content { align-items: center; display: flex; gap: 10px; min-width: 0; }
+  .confirm-content { display: none; flex-direction: column; gap: 7px; min-width: 0; width: 100%; }
+  .island.confirm .state-content { display: none; }
+  .island.confirm .confirm-content { display: flex; }
+  .label { font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .confirm-summary { color: var(--text); font-size: 15px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .confirm-details, .confirm-hint { color: var(--text-dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .confirm-hint { color: var(--accent); margin-top: auto; }
+  .icon { flex: 0 0 auto; height: 16px; position: relative; width: 20px; }
+  .dot { background: var(--danger); border-radius: 50%; height: 8px; left: 6px; position: absolute; top: 4px; width: 8px; }
+  .bars { align-items: center; display: flex; gap: 2px; height: 16px; left: 0; position: absolute; top: 0; }
+  .bars i { animation: bars 0.8s ease-in-out infinite alternate; background: var(--danger); border-radius: 2px; height: 6px; width: 3px; }
+  .bars i:nth-child(2) { animation-delay: 0.15s; height: 12px; }
+  .bars i:nth-child(3) { animation-delay: 0.3s; height: 8px; }
+  .bars i:nth-child(4) { animation-delay: 0.45s; height: 14px; }
+  .spinner { animation: spin 0.9s linear infinite; border: 2px solid rgba(169, 214, 160, 0.25); border-radius: 50%; border-top-color: var(--accent); height: 16px; width: 16px; }
+  .check::after { color: var(--accent); content: '✓'; font-size: 20px; line-height: 16px; }
+  .cross::after { color: var(--danger); content: '×'; font-size: 24px; line-height: 14px; }
+  @keyframes bars { from { transform: scaleY(0.55); } to { transform: scaleY(1); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .island, .spinner, .bars i { animation: none; transition: none; }
   }
 </style>
 </head>
 <body>
-  <div class="pill" id="pill">
-    <div class="dot"></div>
-    <span class="label" id="label">Listening...</span>
+  <div class="island" id="island">
+    <div class="state-content">
+      <div class="icon" id="icon"></div>
+      <span class="label" id="label">Listening...</span>
+    </div>
+    <div class="confirm-content">
+      <div class="confirm-summary" id="confirmSummary"></div>
+      <div class="confirm-details" id="confirmDetails"></div>
+      <div class="confirm-hint">Super+Shift+Y confirm - Super+Shift+N cancel</div>
+    </div>
   </div>
-
   <script>
-    const pill = document.getElementById('pill');
+    const island = document.getElementById('island');
+    const icon = document.getElementById('icon');
     const label = document.getElementById('label');
+    const confirmSummary = document.getElementById('confirmSummary');
+    const confirmDetails = document.getElementById('confirmDetails');
 
-    window.overlayAPI.onUpdateState(({ state, text }) => {
+    function setCompact(state, text) {
+      island.className = `island ${state} visible`;
+      icon.className = `icon ${state === 'done' ? 'check' : state === 'error' ? 'cross' : ''}`;
+      icon.replaceChildren();
       if (state === 'recording') {
-        pill.className = 'pill recording visible';
-        label.textContent = 'Listening...';
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        icon.appendChild(dot);
+        const bars = document.createElement('span');
+        bars.className = 'bars';
+        for (let i = 0; i < 4; i += 1) bars.appendChild(document.createElement('i'));
+        icon.appendChild(bars);
       } else if (state === 'thinking') {
-        pill.className = 'pill thinking visible';
-        label.textContent = 'Thinking...';
-      } else if (state === 'confirm') {
-        pill.className = 'pill confirm visible';
-        label.textContent = text || 'Confirm command';
-      } else if (state === 'done') {
-        pill.className = 'pill done visible';
-        label.textContent = text || 'Done';
-      } else if (state === 'error') {
-        pill.className = 'pill error visible';
-        label.textContent = text || 'Something went wrong';
+        icon.className = 'icon spinner';
+      }
+      label.textContent = text || (state === 'recording' ? 'Listening...' : state === 'thinking' ? 'Thinking...' : state === 'done' ? 'Done' : 'Something went wrong');
+    }
+
+    function formatParam(key, value) {
+      const name = String(key);
+      const lowerName = name.toLowerCase();
+      const stringValue = String(value);
+      const looksSensitive = /(key|token|secret|password|credential|authorization)/i.test(lowerName)
+        || /(sk-ant-|sk-[a-z0-9_-]{12,}|gsk_|AIza[a-z0-9_-]{12,}|Bearer\s+[a-z0-9._-]{12,}|gh[pousr]_|github_pat_|xox[baprs]-)/i.test(stringValue);
+      if (looksSensitive) return `${name}=[hidden]`;
+      return `${name}=${stringValue.replace(/\s+/g, ' ').slice(0, 120)}`;
+    }
+
+    window.overlayAPI.onUpdateState((data) => {
+      const { state, text, summary, action, params } = data;
+      if (state === 'confirm') {
+        island.className = 'island confirm visible';
+        confirmSummary.textContent = summary || text || 'Confirm command';
+        const safeParams = params && typeof params === 'object' ? Object.entries(params).map(([key, value]) => formatParam(key, value)).join(', ') : '';
+        confirmDetails.textContent = action ? `${action}${safeParams ? ` · ${safeParams}` : ''}` : '';
+      } else if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error') {
+        setCompact(state, text);
       } else if (state === 'hide') {
-        pill.classList.add('fade-out');
-        pill.classList.remove('visible');
+        island.classList.remove('visible');
       }
     });
   </script>
