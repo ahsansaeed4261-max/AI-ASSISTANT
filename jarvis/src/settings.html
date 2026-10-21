@@ -167,6 +167,15 @@
     .status.error { color: var(--danger); }
     .content::-webkit-scrollbar-thumb, .history-list::-webkit-scrollbar-thumb { background: rgba(238, 240, 246, 0.2); }
     .content::-webkit-scrollbar-thumb:hover, .history-list::-webkit-scrollbar-thumb:hover { background: rgba(238, 240, 246, 0.32); }
+
+    /* Finish: compact hierarchy and tactile, low-noise controls. */
+    .settings-shell{border-color:rgba(169,214,160,.14);box-shadow:0 18px 48px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.04)}
+    .tab{transition:background 150ms ease-out,color 150ms ease-out,transform 150ms ease-out}.tab:active{transform:scale(.97)}
+    button{transition:background 150ms ease-out,border-color 150ms ease-out,transform 150ms ease-out,opacity 150ms ease-out}button:active{transform:scale(.97)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .field{box-shadow:inset 0 1px 0 rgba(255,255,255,.025);transition:background 150ms ease-out,border-color 150ms ease-out}.field:focus-within{background:rgba(169,214,160,.055);border-color:rgba(169,214,160,.2)}
+    input[type="text"],input[type="password"],select{box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+    .btn-primary{box-shadow:0 4px 14px rgba(169,214,160,.12)}.btn-primary:hover{box-shadow:0 6px 18px rgba(169,214,160,.2)}
+    .history-entry{box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
   </style>
 </head>
 <body>

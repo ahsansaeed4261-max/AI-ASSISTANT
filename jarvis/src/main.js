@@ -8,6 +8,11 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, session } = require('electron');
+const { execFile } = require('child_process');
+const fs = require('fs');
+const { promisify } = require('util');
+const execFileAsync = promisify(execFile);
+const os = require('os');
 const path = require('path');
 const Store = require('electron-store');
 const trigger = require('./trigger');
@@ -122,6 +127,19 @@ let recorderWindow = null;
 let panelWindow = null;
 let panelHideTimer = null;
 let panelClosing = false;
+let appCache = [];
+let appCacheAt = 0;
+let powerActionRunning = false;
+const panelTools = new Set();
+const cpuState = { idle: 0, total: 0 };
+const networkState = { rx: 0, tx: 0, time: 0, totalRx: 0, totalTx: 0, samples: [] };
+
+const POWER_ACTIONS = {
+  lock: ['loginctl', ['lock-session']],
+  sleep: ['systemctl', ['suspend']],
+  restart: ['systemctl', ['reboot']],
+  shutdown: ['systemctl', ['poweroff']],
+};
 
 console.log('[JARVIS] Starting...');
 
@@ -243,11 +261,19 @@ function togglePanelWindow() {
     return;
   }
 
+  getCachedApplications();
   clearTimeout(panelHideTimer);
   panelClosing = false;
   panel.show();
   panel.focus();
-  panel.webContents.send('panel-state', { open: true });
+  const sendOpen = () => {
+    if (panel && !panel.isDestroyed()) panel.webContents.send('panel-state', { open: true });
+  };
+  if (panel.webContents.isLoading()) {
+    panel.webContents.once('did-finish-load', () => setTimeout(sendOpen, 60));
+  } else {
+    sendOpen();
+  }
 }
 
 // ── Overlay window ────────────────────────────────────────────────────────────
@@ -352,6 +378,132 @@ ipcMain.handle('get-settings', () => {
 
 ipcMain.on('close-panel', hidePanelWindow);
 
+function runFixedCommand(command, args) {
+  return new Promise((resolve) => {
+    execFile(command, args, { shell: false, timeout: 3000 }, (error, stdout, stderr) => {
+      resolve({ code: error ? (typeof error.code === 'number' ? error.code : 1) : 0, stdout: stdout || '', stderr: stderr || '' });
+    });
+  });
+}
+
+async function checkPanelTool(command) {
+  try { await execFileAsync(command, ['--version'], { shell: false, timeout: 3000 }); panelTools.add(command); }
+  catch (_) { panelTools.delete(command); }
+}
+
+async function initializePanelTools() {
+  await Promise.all(['wpctl', 'nmcli', 'bluetoothctl', 'playerctl'].map(checkPanelTool));
+}
+
+function readText(file) { try { return fs.readFileSync(file, 'utf8'); } catch (_) { return ''; } }
+function commandAvailable(command) { return panelTools.has(command); }
+function parseVolume(text) { const match = text.match(/Volume:\s*([0-9.]+)/); return match ? Math.round(Math.max(0, Math.min(1, Number(match[1]))) * 100) : 0; }
+function parseBool(text, key) { const match = text.match(new RegExp(`${key}:\\s*(yes|no)`, 'i')); return match ? match[1].toLowerCase() === 'yes' : false; }
+
+async function getControlsData() {
+  const result = { volume: { available: commandAvailable('wpctl'), value: 0, muted: false }, wifi: { available: commandAvailable('nmcli'), enabled: false, ssid: '' }, bluetooth: { available: commandAvailable('bluetoothctl'), enabled: false }, audio: { available: commandAvailable('wpctl'), name: '' }, media: { available: commandAvailable('playerctl'), playing: false, title: '', artist: '', position: 0, length: 0 } };
+  if (result.volume.available) { const volume = await runFixedCommand('wpctl', ['get-volume', '@DEFAULT_AUDIO_SINK@']); result.volume.value = parseVolume(volume.stdout); result.volume.muted = /\\[MUTED\\]/i.test(volume.stdout); const sink = await runFixedCommand('wpctl', ['inspect', '@DEFAULT_AUDIO_SINK@']); const match = sink.stdout.match(/node.description\s*=\s*"([^"]+)/); result.audio.name = match ? match[1] : ''; }
+  if (result.wifi.available) { const radio = await runFixedCommand('nmcli', ['radio', 'wifi']); result.wifi.enabled = radio.stdout.trim() === 'enabled'; const ssid = await runFixedCommand('nmcli', ['-t', '-f', 'ACTIVE,SSID', 'dev', 'wifi']); const line = ssid.stdout.split(/\r?\n/).find((item) => item.startsWith('yes:')); result.wifi.ssid = line ? line.slice(4) : ''; }
+  if (result.bluetooth.available) { const bluetooth = await runFixedCommand('bluetoothctl', ['show']); result.bluetooth.enabled = parseBool(bluetooth.stdout, 'Powered'); }
+  if (result.media.available) { const media = await runFixedCommand('playerctl', ['metadata', '--format', '{{status}}\t{{title}}\t{{artist}}\t{{position}}\t{{mpris:length}}']); const parts = media.stdout.trim().split('\t'); if (parts.length >= 5 && parts[0]) { result.media.playing = parts[0].toLowerCase() === 'playing'; result.media.title = parts[1] || ''; result.media.artist = parts[2] || ''; result.media.position = Number(parts[3]) || 0; result.media.length = Number(parts[4]) || 0; } }
+  return result;
+}
+
+function readCpu() { const line = readText('/proc/stat').split('\n').find((item) => /^cpu\s/.test(item)); if (!line) return { usage: 0 }; const values = line.trim().split(/\s+/).slice(1).map(Number); const idle = values[3] + (values[4] || 0); const total = values.reduce((sum, value) => sum + value, 0); const deltaTotal = total - cpuState.total; const deltaIdle = idle - cpuState.idle; cpuState.total = total; cpuState.idle = idle; return { usage: deltaTotal > 0 ? Math.round((1 - deltaIdle / deltaTotal) * 100) : 0 }; }
+function readNetwork() { let rx = 0; let tx = 0; for (const line of readText('/proc/net/dev').split('\n').slice(2)) { const match = line.trim().match(/^([^:]+):\s*(.*)$/); if (!match || match[1].trim() === 'lo') continue; const fields = match[2].trim().split(/\s+/).map(Number); rx += fields[0] || 0; tx += fields[8] || 0; } const now = Date.now(); const seconds = networkState.time ? Math.max((now - networkState.time) / 1000, .001) : 0; const rxRate = networkState.rx ? Math.max(0, rx - networkState.rx) / seconds : 0; const txRate = networkState.tx ? Math.max(0, tx - networkState.tx) / seconds : 0; if (networkState.time) { networkState.totalRx += Math.max(0, rx - networkState.rx); networkState.totalTx += Math.max(0, tx - networkState.tx); } networkState.rx = rx; networkState.tx = tx; networkState.time = now; networkState.samples.push({ rx: rxRate, tx: txRate }); if (networkState.samples.length > 40) networkState.samples.shift(); return { rxRate, txRate, totalRx: networkState.totalRx, totalTx: networkState.totalTx, samples: networkState.samples }; }
+function findCpuTemp() { try { for (const hwmon of fs.readdirSync('/sys/class/hwmon')) { const base = path.join('/sys/class/hwmon', hwmon); if (!/k10temp|coretemp/i.test(readText(path.join(base, 'name')))) continue; const input = fs.readdirSync(base).find((file) => /^temp\d+_input$/.test(file)); if (input) return Number(readText(path.join(base, input)).trim()) / 1000; } } catch (_) {} return null; }
+async function readGpu() { const drm = '/sys/class/drm'; try { for (const card of fs.readdirSync(drm).filter((name) => /^card\d+$/.test(name))) { const base = path.join(drm, card, 'device'); const busy = Number(readText(path.join(base, 'gpu_busy_percent')).trim()); if (Number.isFinite(busy)) return { available: true, usage: busy, model: 'AMD GPU', temp: findCpuTemp() }; } } catch (_) {} try { const output = await runFixedCommand('nvidia-smi', ['--query-gpu=utilization.gpu,temperature.gpu,name', '--format=csv,noheader,nounits']); if (output.code === 0) { const [usage, temp, ...name] = output.stdout.trim().split(',').map((part) => part.trim()); return { available: true, usage: Number(usage) || 0, temp: Number(temp) || null, model: name.join(', ') || 'NVIDIA GPU' }; } } catch (_) {} return { available: false }; }
+async function getStatsData() { const mem = readText('/proc/meminfo'); const total = Number((mem.match(/^MemTotal:\s+(\d+)/m) || [0, 0])[1]) * 1024; const available = Number((mem.match(/^MemAvailable:\s+(\d+)/m) || [0, 0])[1]) * 1024; let storage = { available: false }; try { const stat = fs.statfsSync('/'); storage = { available: true, used: stat.blocks * stat.bsize - stat.bavail * stat.bsize, total: stat.blocks * stat.bsize }; } catch (_) {} let battery = { available: false }; try { const batteryPath = fs.readdirSync('/sys/class/power_supply', { withFileTypes: true }).find((entry) => entry.name.startsWith('BAT')); if (batteryPath) { const base = path.join('/sys/class/power_supply', batteryPath.name); const capacity = Number(readText(path.join(base, 'capacity')).trim()); battery = { available: Number.isFinite(capacity), capacity, status: readText(path.join(base, 'status')).trim() }; } } catch (_) {} return { cpu: { ...readCpu(), model: (readText('/proc/cpuinfo').match(/^model name\s*:\s*(.+)$/m) || [0, 'CPU'])[1], temp: findCpuTemp() }, memory: { available: total > 0, used: total - available, total }, storage, network: readNetwork(), battery, gpu: await readGpu() }; }
+
+function scanApplications() {
+  const directories = [
+    '/usr/share/applications',
+    path.join(os.homedir(), '.local/share/applications'),
+    '/var/lib/flatpak/exports/share/applications',
+    path.join(os.homedir(), '.local/share/flatpak/exports/share/applications'),
+  ];
+  const applications = [];
+  const seen = new Set();
+
+  for (const directory of directories) {
+    let files;
+    try { files = fs.readdirSync(directory); } catch (_) { continue; }
+    for (const file of files) {
+      if (!file.endsWith('.desktop') || seen.has(file)) continue;
+      let content;
+      try { content = fs.readFileSync(path.join(directory, file), 'utf8'); } catch (_) { continue; }
+      const values = {};
+      for (const line of content.split(/\\r?\\n/)) {
+        const match = line.match(/^([A-Za-z][A-Za-z0-9-]*)=(.*)$/);
+        if (match && values[match[1]] === undefined) values[match[1]] = match[2];
+      }
+      if (!values.Name || !values.Exec || values.NoDisplay === 'true' || values.Hidden === 'true' || values.Terminal === 'true') continue;
+      seen.add(file);
+      applications.push({ id: file, name: values.Name, icon: values.Icon || '' });
+    }
+  }
+  return applications.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getCachedApplications() {
+  if (Date.now() - appCacheAt >= 30_000) {
+    appCache = scanApplications();
+    appCacheAt = Date.now();
+  }
+  return appCache;
+}
+
+ipcMain.handle('get-apps', () => getCachedApplications().map(({ id, name, icon }) => ({ id, name, icon })));
+ipcMain.handle('launch-app', (event, id) => {
+  const application = getCachedApplications().find((item) => item.id === id);
+  if (!application) return { ok: false, error: 'Unknown application' };
+  const desktopId = application.id.endsWith('.desktop') ? application.id.slice(0, -8) : application.id;
+  execFile('gtk-launch', [desktopId], { shell: false, detached: true, stdio: 'ignore' }, (error) => {
+    if (error) console.error(`[JARVIS] app launch failed code=${typeof error.code === 'number' ? error.code : 1}`);
+  });
+  hidePanelWindow();
+  return { ok: true };
+});
+
+ipcMain.handle('power-action', async (event, id) => {
+  if (powerActionRunning || !Object.prototype.hasOwnProperty.call(POWER_ACTIONS, id)) return { ok: false };
+  powerActionRunning = true;
+  const [commandName, args] = POWER_ACTIONS[id];
+  const result = await runFixedCommand(commandName, args);
+  powerActionRunning = false;
+  if (result.code !== 0) console.error(`[JARVIS] power action ${id} failed code=${result.code}`);
+  if (result.code === 0 && (id === 'lock' || id === 'sleep')) hidePanelWindow();
+  return { ok: result.code === 0 };
+});
+
+ipcMain.handle('get-controls', getControlsData);
+ipcMain.handle('set-volume', async (event, value) => {
+  if (!commandAvailable('wpctl') || !Number.isFinite(value)) return { ok: false, available: false };
+  const result = await runFixedCommand('wpctl', ['set-volume', '@DEFAULT_AUDIO_SINK@', `${Math.round(Math.max(0, Math.min(100, value)))}%`]);
+  return { ok: result.code === 0, available: true };
+});
+ipcMain.handle('toggle-mute', async () => {
+  if (!commandAvailable('wpctl')) return { ok: false, available: false };
+  const result = await runFixedCommand('wpctl', ['set-mute', '@DEFAULT_AUDIO_SINK@', 'toggle']);
+  return { ok: result.code === 0, available: true };
+});
+ipcMain.handle('set-wifi', async (event, enabled) => {
+  if (!commandAvailable('nmcli') || typeof enabled !== 'boolean') return { ok: false, available: false };
+  const result = await runFixedCommand('nmcli', ['radio', 'wifi', enabled ? 'on' : 'off']);
+  return { ok: result.code === 0, available: true };
+});
+ipcMain.handle('set-bluetooth', async (event, enabled) => {
+  if (!commandAvailable('bluetoothctl') || typeof enabled !== 'boolean') return { ok: false, available: false };
+  const result = await runFixedCommand('bluetoothctl', ['power', enabled ? 'on' : 'off']);
+  return { ok: result.code === 0, available: true };
+});
+ipcMain.handle('media', async (event, action) => {
+  if (!commandAvailable('playerctl') || !['play-pause', 'next', 'previous'].includes(action)) return { ok: false, available: false };
+  const result = await runFixedCommand('playerctl', [action]);
+  return { ok: result.code === 0, available: true };
+});
+ipcMain.handle('get-stats', getStatsData);
+
 ipcMain.handle('get-mic-device-id', () => store.get('micDeviceId') || '');
 
 ipcMain.handle('get-history', () => {
@@ -385,9 +537,10 @@ ipcMain.handle('save-settings', (event, settings) => {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   console.log('[JARVIS] App ready');
   logKeyPresence('startup');
+  await initializePanelTools();
 
   // Allow microphone access for this app's own renderer windows
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
