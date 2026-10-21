@@ -2,256 +2,191 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
   <title>JARVIS Settings</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --bg: rgba(20, 20, 20, 0.82);
+      --surface: rgba(255, 255, 255, 0.06);
+      --surface-hover: rgba(255, 255, 255, 0.11);
+      --border: rgba(255, 255, 255, 0.12);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --footer-bg: rgba(20, 20, 20, 0.74);
+      --input-focus-bg: rgba(255, 255, 255, 0.09);
+      --scrollbar: rgba(255, 255, 255, 0.2);
+      --scrollbar-hover: rgba(255, 255, 255, 0.32);
+      --accent: #4a9eff;
+      --accent-hover: #67aeff;
+      --accent-ring: rgba(74, 158, 255, 0.25);
+      --text: #f3f6fa;
+      --text-dim: rgba(243, 246, 250, 0.62);
+      --text-muted: rgba(243, 246, 250, 0.42);
+      --success: #57d68d;
+      --error: #ff6b6b;
+      --radius: 10px;
+      --window-radius: 16px;
+      --blur: 16px;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
+      min-height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a1a;
-      color: #e8e8e8;
-      padding: 24px;
+    }
+
+    .settings-shell {
+      display: flex;
+      flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      background: var(--bg);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--border);
+      border-radius: var(--window-radius);
+      box-shadow: var(--shadow);
     }
 
-    h1 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .settings-header { flex: 0 0 auto; padding: 24px 24px 16px; }
+
+    h1 { display: flex; align-items: baseline; gap: 8px; color: var(--text); font-size: 18px; font-weight: 650; }
+    h1 .subtitle { color: var(--text-dim); font-size: 12px; font-weight: 400; }
+
+    .content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 24px 36px; }
+    .content::-webkit-scrollbar, .history-list::-webkit-scrollbar { width: 8px; }
+    .content::-webkit-scrollbar-track, .history-list::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb, .history-list::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+    .content::-webkit-scrollbar-thumb:hover, .history-list::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+    .divider { height: 1px; background: var(--border); margin: 24px 0; }
+    .section-label { color: var(--text-muted); font-size: 11px; font-weight: 650; letter-spacing: 0.9px; text-transform: uppercase; margin-bottom: 12px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; color: var(--text-dim); font-size: 12px; font-weight: 500; margin-bottom: 6px; }
+    .hint { color: var(--text-muted); font-size: 11px; line-height: 1.35; margin-top: 4px; }
+
+    input[type="text"], input[type="password"], select {
+      width: 100%; appearance: none; outline: none; color: var(--text); font-size: 13px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 9px 11px; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     }
+    input[type="text"], input[type="password"] { font-family: 'Courier New', monospace; }
+    select { cursor: pointer; padding-right: 34px; background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+    input[type="text"]:focus, input[type="password"]:focus, select:focus { background: var(--input-focus-bg); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 
-    h1 .subtitle {
-      font-size: 12px;
-      font-weight: 400;
-      color: #888;
-    }
+    .key-input-row, .field-row { display: flex; gap: 8px; }
+    .key-input-row input, .field-row select { flex: 1; }
 
-    .divider {
-      height: 1px;
-      background: rgba(255,255,255,0.08);
-      margin: 16px 0;
-    }
+    button { border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; padding: 9px 15px; transition: background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s; }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    .key-toggle, .refresh-button, .history-copy, .history-clear, .btn-secondary { background: transparent; border-color: var(--border); color: var(--text-dim); }
+    .key-toggle:hover, .refresh-button:hover, .history-copy:hover, .history-clear:hover, .btn-secondary:hover { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text); }
+    .key-toggle { min-width: 58px; padding: 9px 10px; }
+    .refresh-button { padding: 9px 10px; }
 
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: #666;
-      margin-bottom: 10px;
-    }
+    .hotkey-row { display: flex; gap: 8px; align-items: center; }
+    .hotkey-chip { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-dim); font-size: 13px; padding: 7px 10px; }
+    .hotkey-chip input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; height: 14px; width: 14px; }
 
-    .field {
-      margin-bottom: 14px;
-    }
+    .history-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .history-list { max-height: 220px; overflow-y: auto; padding-right: 4px; }
+    .history-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; padding: 10px; }
+    .history-entry-header { align-items: center; display: flex; gap: 8px; justify-content: space-between; margin-bottom: 7px; }
+    .history-time, .history-label { color: var(--text-muted); font-size: 11px; }
+    .history-label { margin-top: 6px; }
+    .history-text { color: var(--text-dim); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .history-copy, .history-clear { font-size: 11px; padding: 5px 9px; }
+    .history-empty { color: var(--text-muted); font-size: 12px; padding: 8px 0; }
 
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: #aaa;
-      margin-bottom: 5px;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 100%;
-      background: #2a2a2a;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px;
-      padding: 8px 10px;
-      color: #e8e8e8;
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    input[type="text"],
-    input[type="password"] {
-      font-family: 'Courier New', monospace;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus,
-    select:focus {
-      border-color: #4a9eff;
-    }
-
-    .key-input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .key-input-row input { flex: 1; }
-
-    .key-toggle {
-      min-width: 58px;
-      padding: 8px 10px;
-      background: #333;
-      color: #ccc;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .key-toggle:hover { background: #3d3d3d; }
-
-    .hotkey-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .history-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
-    .history-list {
-      max-height: 220px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .history-entry {
-      background: #222;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 6px;
-      padding: 10px;
-      margin-bottom: 8px;
-    }
-
-    .history-entry-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 7px;
-    }
-
-    .history-time {
-      font-size: 11px;
-      color: #777;
-    }
-
-    .history-label {
-      font-size: 11px;
-      color: #888;
-      margin-top: 5px;
-    }
-
-    .history-text {
-      color: #ddd;
-      font-size: 12px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      margin-top: 2px;
-    }
-
-    .history-copy,
-    .history-clear {
-      padding: 5px 9px;
-      background: #333;
-      color: #ccc;
-      border: 1px solid rgba(255,255,255,0.1);
-      font-size: 11px;
-    }
-
-    .history-copy:hover,
-    .history-clear:hover { background: #3d3d3d; }
-
-    .history-empty {
-      color: #666;
-      font-size: 12px;
-      padding: 8px 0;
-    }
-
-    .hotkey-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #2a2a2a;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 13px;
-      color: #ccc;
-    }
-
-    .hotkey-chip input[type="checkbox"] {
-      accent-color: #4a9eff;
-      width: 14px;
-      height: 14px;
-      cursor: pointer;
-    }
-
-    .footer {
-      position: absolute;
-      bottom: 24px;
-      left: 24px;
-      right: 24px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    button {
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      transition: background 0.15s, opacity 0.15s;
-    }
-
-    .btn-secondary {
-      background: #2a2a2a;
-      color: #aaa;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .btn-secondary:hover { background: #333; }
-
-    .btn-primary {
-      background: #4a9eff;
-      color: #fff;
-    }
-
-    .btn-primary:hover { background: #3a8eee; }
-
-    .status {
-      font-size: 12px;
-      color: #4caf50;
-      align-self: center;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
+    .footer { align-items: center; background: var(--footer-bg); border-top: 1px solid var(--border); display: flex; flex: 0 0 auto; gap: 10px; justify-content: flex-end; padding: 16px 24px 24px; }
+    .btn-primary { background: var(--accent); color: var(--text); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .status { align-self: center; color: var(--success); font-size: 12px; margin-right: auto; opacity: 0; transition: opacity 0.15s; }
     .status.visible { opacity: 1; }
-    .status.error { color: #ff5555; }
+    .status.error { color: var(--error); }
+  </style>
+  <style>
+    :root {
+      --bg: #0b0d1a;
+      --panel-bg: rgba(11, 13, 26, 0.92);
+      --surface: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #eef0f6;
+      --text-dim: rgba(238, 240, 246, 0.55);
+      --text-muted: rgba(238, 240, 246, 0.55);
+      --accent: #a9d6a0;
+      --accent-ink: #12210f;
+      --accent-hover: #c0e7b8;
+      --warm: #ff8a3d;
+      --danger: #ff5c5c;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-pill: 999px;
+      --accent-ring: rgba(169, 214, 160, 0.25);
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.42);
+    }
+
+    body { font-family: "Outfit", "Plus Jakarta Sans", system-ui, sans-serif; }
+    .settings-shell { background: var(--panel-bg); border-color: var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+    .settings-header { padding: 20px 24px 12px; }
+    h1 { color: var(--text); font-size: 15px; font-weight: 650; }
+    h1 .subtitle { color: var(--text-dim); font-size: 12px; }
+    .tab-bar { display: flex; flex: 0 0 auto; gap: 5px; padding: 0 24px 14px; }
+    .tab { background: transparent; border: 1px solid transparent; border-radius: var(--radius-pill); color: var(--text-dim); font-size: 12px; padding: 7px 12px; }
+    .tab:hover { background: var(--surface); color: var(--text); transform: none; }
+    .tab.active { background: rgba(169, 214, 160, 0.13); border-color: rgba(169, 214, 160, 0.22); color: var(--accent); }
+    .content { padding: 0 24px 40px; }
+    .tab-panel { display: none; opacity: 0; transition: opacity 0.15s ease; }
+    .tab-panel.active { display: block; opacity: 1; animation: tab-fade 0.15s ease; }
+    @keyframes tab-fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+    .section-label { color: var(--text-dim); letter-spacing: 1px; margin-bottom: 14px; }
+    .field { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 12px; padding: 13px; }
+    label { color: var(--text); }
+    .hint { color: var(--text-dim); font-size: 11px; margin-top: 4px; }
+    input[type="text"], input[type="password"], select { background: var(--surface); border-color: var(--border); border-radius: var(--radius-md); color: var(--text); padding: 10px; }
+    input[type="text"]:focus, input[type="password"]:focus, select:focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+    select { background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); }
+    .key-toggle, .refresh-button, .history-copy, .history-clear, .btn-secondary { border-color: var(--border); border-radius: var(--radius-pill); color: var(--text-dim); }
+    .key-toggle:hover, .refresh-button:hover, .history-copy:hover, .history-clear:hover, .btn-secondary:hover { background: var(--surface); border-color: var(--accent); color: var(--text); }
+    .hotkey-chip, .history-entry { background: var(--surface); border-color: var(--border); border-radius: var(--radius-md); }
+    .hotkey-chip { color: var(--text-dim); }
+    .hotkey-chip input[type="checkbox"] { accent-color: var(--accent); }
+    .history-time, .history-label, .history-empty { color: var(--text-dim); }
+    .history-text { color: var(--text); }
+    .divider { background: var(--border); margin: 20px 0; }
+    .footer { background: var(--bg); border-color: var(--border); padding: 14px 24px 20px; }
+    .btn-primary { background: var(--accent); border-radius: var(--radius-pill); color: var(--accent-ink); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: transparent; }
+    .status { color: var(--accent); }
+    .status.error { color: var(--danger); }
+    .content::-webkit-scrollbar-thumb, .history-list::-webkit-scrollbar-thumb { background: rgba(238, 240, 246, 0.2); }
+    .content::-webkit-scrollbar-thumb:hover, .history-list::-webkit-scrollbar-thumb:hover { background: rgba(238, 240, 246, 0.32); }
   </style>
 </head>
 <body>
-  <h1>JARVIS <span class="subtitle">Voice Dictation</span></h1>
+  <div class="settings-shell">
+    <header class="settings-header">
+      <h1>JARVIS <span class="subtitle">Voice Dictation</span></h1>
+    </header>
 
-  <div class="divider"></div>
+    <nav class="tab-bar" aria-label="Settings sections">
+      <button type="button" class="tab active" data-tab="keys">Keys</button>
+      <button type="button" class="tab" data-tab="recording">Recording</button>
+      <button type="button" class="tab" data-tab="cleanup">Cleanup</button>
+    </nav>
 
-  <div class="section-label">API Keys</div>
+    <main class="content">
+      <section class="tab-panel active" data-panel="keys">
+        <div class="section-label">API Keys</div>
 
   <div class="field">
-    <label>Claude API Key <span style="color:#888">(for cleanup)</span></label>
+    <label>Claude API Key <span style="color:var(--text-muted)">(for cleanup)</span></label>
     <div class="key-input-row">
       <input type="password" id="claudeKey" placeholder="sk-ant-..." autocomplete="off" />
       <button type="button" class="key-toggle" data-key-input="claudeKey">Show</button>
@@ -260,7 +195,7 @@
   </div>
 
   <div class="field">
-    <label>Groq API Key <span style="color:#888">(for cleanup)</span></label>
+    <label>Groq API Key <span style="color:var(--text-muted)">(for cleanup)</span></label>
     <div class="key-input-row">
       <input type="password" id="groqKey" placeholder="gsk_..." autocomplete="off" />
       <button type="button" class="key-toggle" data-key-input="groqKey">Show</button>
@@ -269,7 +204,7 @@
   </div>
 
   <div class="field">
-    <label>Gemini API Key <span style="color:#888">(for cleanup)</span></label>
+    <label>Gemini API Key <span style="color:var(--text-muted)">(for cleanup)</span></label>
     <div class="key-input-row">
       <input type="password" id="geminiKey" placeholder="AIza..." autocomplete="off" />
       <button type="button" class="key-toggle" data-key-input="geminiKey">Show</button>
@@ -278,7 +213,7 @@
   </div>
 
   <div class="field">
-    <label>Deepgram API Key <span style="color:#888">(preferred STT)</span></label>
+    <label>Deepgram API Key <span style="color:var(--text-muted)">(preferred STT)</span></label>
     <div class="key-input-row">
       <input type="password" id="deepgramKey" placeholder="..." autocomplete="off" />
       <button type="button" class="key-toggle" data-key-input="deepgramKey">Show</button>
@@ -287,7 +222,7 @@
   </div>
 
   <div class="field">
-    <label>OpenAI API Key <span style="color:#888">(Whisper STT + GPT cleanup fallback)</span></label>
+    <label>OpenAI API Key <span style="color:var(--text-muted)">(Whisper STT + GPT cleanup fallback)</span></label>
     <div class="key-input-row">
       <input type="password" id="openaiKey" placeholder="sk-..." autocomplete="off" />
       <button type="button" class="key-toggle" data-key-input="openaiKey">Show</button>
@@ -295,12 +230,12 @@
     <div class="hint">Used if Deepgram key is not set</div>
   </div>
 
-  <div class="divider"></div>
+      </section>
 
-  <div class="section-label">Recording & Cleanup</div>
-
-  <div class="field">
-    <label for="cleanupProvider">Cleanup provider</label>
+      <section class="tab-panel" data-panel="cleanup">
+        <div class="section-label">Cleanup</div>
+        <div class="field">
+          <label for="cleanupProvider">Cleanup provider</label>
     <select id="cleanupProvider">
       <option value="auto">Auto</option>
       <option value="ollama">Ollama</option>
@@ -309,23 +244,26 @@
       <option value="openai">OpenAI</option>
       <option value="gemini">Gemini</option>
     </select>
-    <div class="hint">Auto tries available cloud providers, then Ollama.</div>
-  </div>
+          <div class="hint">Auto tries available cloud providers, then Ollama.</div>
+        </div>
+      </section>
 
-  <div class="field">
-    <label for="micDeviceId">Microphone</label>
+      <section class="tab-panel" data-panel="recording">
+        <div class="section-label">Recording</div>
+        <div class="field">
+          <label for="micDeviceId">Microphone</label>
     <div class="field-row">
       <select id="micDeviceId">
         <option value="">System default microphone</option>
       </select>
       <button type="button" class="refresh-button" id="refreshMics">Refresh</button>
     </div>
-    <div class="hint">The system default is used if a saved microphone is unavailable.</div>
-  </div>
+          <div class="hint">The system default is used if a saved microphone is unavailable.</div>
+        </div>
 
-  <div class="divider"></div>
+        <div class="divider"></div>
 
-  <div class="section-label">Hotkey</div>
+        <div class="section-label">Hotkey</div>
 
   <div class="hotkey-row">
     <label class="hotkey-chip">
@@ -349,12 +287,15 @@
     <div class="section-label" style="margin-bottom:0">History</div>
     <button type="button" class="history-clear" id="clearHistory">Clear all</button>
   </div>
-  <div class="history-list" id="historyList"></div>
+        <div class="history-list" id="historyList"></div>
+      </section>
+    </main>
 
-  <div class="footer">
-    <span class="status" id="status">Saved!</span>
-    <button class="btn-secondary" onclick="window.close()">Cancel</button>
-    <button class="btn-primary" onclick="saveSettings()">Save</button>
+    <div class="footer">
+      <span class="status" id="status">Saved!</span>
+      <button class="btn-secondary" onclick="window.close()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+    </div>
   </div>
 
   <script>
@@ -474,6 +415,18 @@
       });
     }
 
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab');
+      const panels = document.querySelectorAll('.tab-panel');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const selected = tab.dataset.tab;
+          tabs.forEach((item) => item.classList.toggle('active', item === tab));
+          panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === selected));
+        });
+      });
+    }
+
     async function loadSettings() {
       const settings = await window.settingsAPI.getSettings();
       document.getElementById('claudeKey').value = settings.apiKeys?.claude || '';
@@ -532,6 +485,7 @@
     });
 
     setupKeyToggles();
+    setupTabs();
     loadSettings();
     loadHistory();
   </script>

@@ -168,6 +168,9 @@ function createSettingsWindow() {
     maximizable: false,
     fullscreenable: false,
     title: 'JARVIS Settings',
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
