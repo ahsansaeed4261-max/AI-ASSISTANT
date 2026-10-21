@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('panelAPI', {
   getApps: () => ipcRenderer.invoke('get-apps'),
   launchApp: (id) => ipcRenderer.invoke('launch-app', id),
   powerAction: (id) => ipcRenderer.invoke('power-action', id),
+  cancelPowerAction: () => ipcRenderer.invoke('power:cancel'),
   getControls: () => ipcRenderer.invoke('get-controls'),
   setVolume: (value) => ipcRenderer.invoke('set-volume', Math.max(0, Math.min(100, Number(value)))),
   toggleMute: () => ipcRenderer.invoke('toggle-mute'),

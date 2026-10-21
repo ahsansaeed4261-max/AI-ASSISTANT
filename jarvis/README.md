@@ -64,6 +64,8 @@ Paste into active window → Restore previous clipboard
 - `overlay.html` – Shows the floating "Listening..." / "Thinking..." pill
 - `settings.html` – UI for API keys and hotkey configuration
 
+For the Electron process model, IPC boundaries, feature-service layout, data storage, and development notes, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 ## Platform Notes
 
 ### Windows
@@ -72,6 +74,9 @@ Paste into active window → Restore previous clipboard
 - GPU and network-traffic stats remain unavailable on Windows rather than reporting Linux-only or placeholder data.
 - The island Controls page now reads Wi-Fi connection, Bluetooth device presence, battery, built-in display brightness, default output volume/mute, and power plans. Brightness, volume/mute, power-plan changes, and media transport keys are implemented; radio/hotspot/night-light/nearby-sharing controls open their corresponding Windows Settings pages. Windows does not yet provide the island with current media-session metadata.
 - The island Stats page reads per-core CPU usage, RAM, system-drive use, network adapter throughput, battery state, and detected graphics adapters. Per-adapter GPU Engine counters are mapped through DXGI LUIDs; NVIDIA telemetry is enriched from `nvidia-smi`. CPU temperature and pagefile usage are not exposed yet. Live polling runs only while Stats is visible; GPU and battery queries are cached.
+- The island Apps page indexes Start Menu shortcuts and Windows Store apps, supports fuzzy search and keyboard navigation, and stores launch counts and cached icons locally. The Clipboard page keeps up to 100 recent text/image items on-device, with search, pin, delete, clear, and pause controls. Clipboard capture runs only while that page is open and respects supported password-manager opt-out formats; contents are not written to logs.
+- The Wallpaper page scans a chosen local folder (default: `Pictures\Wallpapers`), loads cached thumbnails on demand, previews the selected image in a desktop mockup, and applies it per display or across all displays through the Windows `IDesktopWallpaper` API. A click-through reveal transition can be disabled and is suppressed when reduced motion is enabled. Desktop wallpaper changes are Windows-only; external images are not copied into the app.
+- The Power page offers lock, sleep, hibernate, restart, shutdown, and sign-out actions with keyboard navigation. Restart, shutdown, and sign-out display a five-second cancelable countdown; Windows restart/shutdown use the native `shutdown /a` abort path. Sleep uses `SetSuspendState` in suspend mode. Hibernate availability is read from Windows power configuration, and enabling it is an explicit UAC-elevated action.
 
 ### Linux (if running on Linux via Wine or native Electron)
 - Requires `xdotool` or `xte` for paste simulation:

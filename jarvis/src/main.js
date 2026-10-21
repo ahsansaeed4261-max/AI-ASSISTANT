@@ -7,9 +7,10 @@
 // OPENAI_API_KEY and ANTHROPIC_API_KEY are available to getApiKeys().
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, session, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, session, desktopCapturer, shell, dialog } = require('electron');
 const { execFile } = require('child_process');
 const fs = require('fs');
+const crypto = require('crypto');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const os = require('os');
@@ -18,6 +19,9 @@ const Store = require('electron-store');
 const trigger = require('./trigger');
 const controlsService = require('./services/controls');
 const statsService = require('./services/stats');
+const clipboardService = require('./services/clipboard');
+const wallpaperService = require('./services/wallpaper');
+const powerService = require('./services/power');
 
 // ── Fast exit for --action ────────────────────────────────────────────────────
 // If this process was launched with --action, run it and quit immediately.
@@ -126,6 +130,9 @@ function logKeyPresence(label) {
 let tray = null;
 let settingsWindow = null;
 let overlayWindow = null;
+let wallpaperRevealWindow = null;
+let wallpaperApplyInProgress = false;
+let wallpaperFolderDialogOpen = false;
 let captureWindows = [];
 let capsuleConsoleOpen = false;
 let overlayPointerInteractive = false;
@@ -142,24 +149,9 @@ let panelClosing = false;
 let panelDesiredOpen = false;
 let appCache = [];
 let appCacheAt = 0;
-let powerActionRunning = false;
 const panelTools = new Set();
 const cpuState = { idle: 0, total: 0 };
 const networkState = { rx: 0, tx: 0, time: 0, totalRx: 0, totalTx: 0, samples: [] };
-
-const LINUX_POWER_ACTIONS = {
-  lock: ['loginctl', ['lock-session']],
-  sleep: ['systemctl', ['suspend']],
-  restart: ['systemctl', ['reboot']],
-  shutdown: ['systemctl', ['poweroff']],
-};
-
-const WINDOWS_POWER_ACTIONS = {
-  lock: ['rundll32.exe', ['user32.dll,LockWorkStation']],
-  sleep: ['rundll32.exe', ['powrprof.dll,SetSuspendState', '0,1,0']],
-  restart: ['shutdown.exe', ['/r', '/t', '0']],
-  shutdown: ['shutdown.exe', ['/s', '/t', '0']],
-};
 
 console.log('[JARVIS] Starting...');
 
@@ -429,7 +421,7 @@ function createOverlayWindow() {
   });
   overlayHitTestTimer = setInterval(updateOverlayHitTesting, 60);
   overlayWindow.on('blur', () => {
-    if (capsuleConsoleOpen) closeCapsuleConsole();
+    if (capsuleConsoleOpen && !wallpaperFolderDialogOpen) closeCapsuleConsole();
   });
   overlayWindow.on('closed', () => {
     if (overlayHitTestTimer) clearInterval(overlayHitTestTimer);
@@ -688,6 +680,171 @@ ipcMain.handle('controls:open-setting', async (event, key) => {
 });
 
 ipcMain.handle('stats:get', () => statsService.getStats());
+ipcMain.handle('power:get-state', () => powerService.getState());
+ipcMain.handle('power:perform', (event, id) => powerService.performAction(typeof id === 'string' ? id : ''));
+ipcMain.handle('power:cancel', () => powerService.cancelScheduledAction());
+ipcMain.handle('power:enable-hibernate', () => powerService.enableHibernate());
+
+function closeWallpaperReveal() {
+  if (wallpaperRevealWindow && !wallpaperRevealWindow.isDestroyed()) wallpaperRevealWindow.close();
+  wallpaperRevealWindow = null;
+}
+
+async function showWallpaperReveal(image, display, sourceBounds, duration) {
+  closeWallpaperReveal();
+  const { x, y, width, height } = display.bounds;
+  const originX = Math.max(0, Math.min(width, Math.round(sourceBounds.x + sourceBounds.width / 2 - x)));
+  const originY = Math.max(0, Math.min(height, Math.round(sourceBounds.y + 24 - y)));
+  const reveal = new BrowserWindow({
+    title: 'JARVIS Wallpaper Transition',
+    x,
+    y,
+    width,
+    height,
+    frame: false,
+    transparent: false,
+    backgroundColor: '#000000',
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    focusable: false,
+    hasShadow: false,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      preload: path.join(__dirname, 'wallpaper-reveal-preload.js'),
+    },
+  });
+  wallpaperRevealWindow = reveal;
+  reveal.setIgnoreMouseEvents(true, { forward: true });
+  reveal.setAlwaysOnTop(true, 'screen-saver');
+  reveal.on('closed', () => {
+    if (wallpaperRevealWindow === reveal) wallpaperRevealWindow = null;
+  });
+  await reveal.loadFile(path.join(__dirname, 'wallpaper-reveal.html'));
+  if (reveal.isDestroyed()) throw new Error('Wallpaper transition window closed unexpectedly.');
+  reveal.showInactive();
+  reveal.webContents.send('wallpaper-reveal:start', { image, originX, originY, duration });
+  return reveal;
+}
+
+ipcMain.handle('wallpapers:get-state', async () => {
+  if (!wallpaperService.isAvailable()) {
+    return { available: false, folder: '', items: [], displays: [], transitionEnabled: false, selectedId: '' };
+  }
+  const folder = store.get('wallpaperFolder', wallpaperService.getDefaultFolder());
+  const [items, displays] = await Promise.all([
+    Promise.resolve(wallpaperService.listWallpapers(folder)),
+    wallpaperService.listDisplays(),
+  ]);
+  return {
+    available: true,
+    folder,
+    items,
+    displays,
+    transitionEnabled: store.get('wallpaperTransitionEnabled', true) !== false,
+    selectedId: store.get('wallpaperLastSelectedId', ''),
+  };
+});
+
+ipcMain.handle('wallpapers:choose-folder', async () => {
+  if (!wallpaperService.isAvailable()) return { ok: false, error: 'Wallpaper controls are not supported on this platform yet.' };
+  const folder = store.get('wallpaperFolder', wallpaperService.getDefaultFolder());
+  wallpaperFolderDialogOpen = true;
+  let result;
+  try {
+    result = await dialog.showOpenDialog(overlayWindow && !overlayWindow.isDestroyed() ? overlayWindow : undefined, {
+      title: 'Choose wallpaper folder',
+      defaultPath: folder,
+      properties: ['openDirectory'],
+    });
+  } finally {
+    wallpaperFolderDialogOpen = false;
+  }
+  if (result.canceled || !result.filePaths[0]) return { ok: false, canceled: true };
+  store.set('wallpaperFolder', result.filePaths[0]);
+  return { ok: true };
+});
+
+ipcMain.handle('wallpapers:thumbnail', (event, id) => {
+  const folder = store.get('wallpaperFolder', wallpaperService.getDefaultFolder());
+  return wallpaperService.getThumbnail(folder, typeof id === 'string' ? id : '');
+});
+
+ipcMain.handle('wallpapers:show-in-folder', (event, id) => {
+  const folder = store.get('wallpaperFolder', wallpaperService.getDefaultFolder());
+  const wallpaper = wallpaperService.getWallpaper(folder, typeof id === 'string' ? id : '');
+  if (!wallpaper) return { ok: false, error: 'That wallpaper is no longer available.' };
+  shell.showItemInFolder(wallpaper.filePath);
+  return { ok: true };
+});
+
+ipcMain.handle('wallpapers:set-transition', (event, enabled) => {
+  store.set('wallpaperTransitionEnabled', enabled === true);
+  return enabled === true;
+});
+
+ipcMain.handle('wallpapers:apply', async (event, id, displayId, animate) => {
+  if (!wallpaperService.isAvailable()) return { ok: false, error: 'Wallpaper controls are not supported on this platform yet.' };
+  if (wallpaperApplyInProgress) return { ok: false, error: 'A wallpaper change is already in progress.' };
+  if (typeof id !== 'string' || typeof displayId !== 'string' || typeof animate !== 'boolean') {
+    return { ok: false, error: 'Invalid wallpaper selection.' };
+  }
+  wallpaperApplyInProgress = true;
+  let reveal = null;
+  let transitionError = '';
+  try {
+    const folder = store.get('wallpaperFolder', wallpaperService.getDefaultFolder());
+    const wallpaper = wallpaperService.getWallpaper(folder, id);
+    if (!wallpaper) return { ok: false, error: 'That wallpaper is no longer available. Refresh the folder and try again.' };
+    const displays = await wallpaperService.listDisplays();
+    const chosenDisplay = displayId === 'all'
+      ? null
+      : displays.find((display) => display.id === displayId);
+    if (displayId !== 'all' && !chosenDisplay) return { ok: false, error: 'The selected display is no longer available. Refresh and try again.' };
+    const useTransition = animate && store.get('wallpaperTransitionEnabled', true) !== false
+      && !event.sender.isDestroyed();
+    const duration = 960;
+    const transitionStartedAt = Date.now();
+    if (useTransition) {
+      try {
+        const image = wallpaperService.getThumbnail(folder, id);
+        const electronDisplays = screen.getAllDisplays();
+        const islandBounds = overlayWindow && !overlayWindow.isDestroyed()
+          ? overlayWindow.getBounds()
+          : { x: 0, y: 0, width: 1, height: 1 };
+        const islandDisplay = screen.getDisplayMatching(islandBounds);
+        const targetDisplay = chosenDisplay
+          ? electronDisplays[displays.findIndex((display) => display.id === chosenDisplay.id)] || islandDisplay
+          : islandDisplay;
+        reveal = await showWallpaperReveal(image, targetDisplay, islandBounds, duration);
+        await new Promise((resolve) => setTimeout(resolve, 470));
+      } catch (error) {
+        transitionError = error.message || 'The wallpaper transition could not be shown.';
+        console.warn('[JARVIS] Wallpaper transition unavailable:', transitionError);
+        closeWallpaperReveal();
+        reveal = null;
+      }
+    }
+    const result = await wallpaperService.applyWallpaper(folder, id, displayId === 'all' ? null : displayId);
+    store.set('wallpaperLastSelectedId', id);
+    if (reveal) {
+      const remaining = Math.max(0, duration - (Date.now() - transitionStartedAt));
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+    }
+    closeWallpaperReveal();
+    return { ...result, transitionError };
+  } catch (error) {
+    closeWallpaperReveal();
+    console.error('[JARVIS] Could not set wallpaper:', error);
+    return { ok: false, error: error.message || 'Could not set the wallpaper.' };
+  } finally {
+    wallpaperApplyInProgress = false;
+  }
+});
 
 ipcMain.handle('overlay-open-panel', () => {
   openCapsuleConsole();
@@ -772,7 +929,15 @@ function scanApplications() {
           visit(fullPath, depth + 1);
         } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.lnk') && !seen.has(fullPath.toLowerCase())) {
           seen.add(fullPath.toLowerCase());
-          applications.push({ id: fullPath, name: path.basename(entry.name, path.extname(entry.name)), icon: '' });
+          let shortcut = {};
+          try { shortcut = shell.readShortcutLink(fullPath); } catch (_) {}
+          applications.push({
+            id: fullPath,
+            name: path.basename(entry.name, path.extname(entry.name)),
+            icon: shortcut.icon || '',
+            resolvedPath: shortcut.target || fullPath,
+            kind: 'Desktop app',
+          });
         }
       }
     };
@@ -809,43 +974,139 @@ function scanApplications() {
   return applications.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function getCachedApplications() {
-  if (Date.now() - appCacheAt >= 30_000) {
+function getCachedApplications(refresh = false) {
+  if (refresh || Date.now() - appCacheAt >= 30_000) {
     appCache = scanApplications();
     appCacheAt = Date.now();
   }
   return appCache;
 }
 
-ipcMain.handle('get-apps', () => getCachedApplications().map(({ id, name, icon }) => ({ id, name, icon })));
-ipcMain.handle('launch-app', (event, id) => {
-  const application = getCachedApplications().find((item) => item.id === id);
-  if (!application) return { ok: false, error: 'Unknown application' };
+let startAppsCache = [];
+let startAppsCacheAt = 0;
+
+async function getWindowsStoreApps() {
+  if (process.platform !== 'win32') return [];
+  if (Date.now() - startAppsCacheAt < 60_000) return startAppsCache;
+  const script = String.raw`$ErrorActionPreference='SilentlyContinue'; Get-StartApps | Select-Object Name,AppID | ConvertTo-Json -Compress`;
+  try {
+    const encoded = Buffer.from(`$ProgressPreference='SilentlyContinue'\n${script}`, 'utf16le').toString('base64');
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], { windowsHide: true, timeout: 8000, maxBuffer: 1024 * 1024 });
+    const result = JSON.parse(stdout.trim());
+    const entries = Array.isArray(result) ? result : (result ? [result] : []);
+    startAppsCache = entries.filter((entry) => entry?.Name && entry?.AppID).map((entry) => ({
+      id: `uwp:${entry.AppID}`,
+      name: entry.Name,
+      icon: '',
+      resolvedPath: '',
+      kind: 'Store app',
+    }));
+    startAppsCacheAt = Date.now();
+  } catch (error) {
+    console.warn('[JARVIS] Store app indexing unavailable:', error.message);
+    startAppsCache = [];
+    startAppsCacheAt = Date.now();
+  }
+  return startAppsCache;
+}
+
+async function getApplicationList(refresh = false) {
+  if (refresh) startAppsCacheAt = 0;
+  const shortcutApps = getCachedApplications(refresh).map((application) => ({ ...application, kind: 'Desktop app' }));
+  const storeApps = await getWindowsStoreApps();
+  const seen = new Set();
+  return [...shortcutApps, ...storeApps].filter((application) => {
+    const key = `${application.name.toLowerCase()}|${application.id.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map((application) => {
+    const usage = store.get('appUsage', {})[application.id] || {};
+    return { ...application, launchCount: usage.count || 0, lastUsed: usage.lastUsed || 0 };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function recordAppLaunch(id) {
+  const usage = store.get('appUsage', {});
+  const current = usage[id] || { count: 0, lastUsed: 0 };
+  usage[id] = { count: current.count + 1, lastUsed: Date.now() };
+  store.set('appUsage', usage);
+}
+
+async function launchApplication(id) {
+  const application = (await getApplicationList()).find((item) => item.id === id);
+  if (!application) return { ok: false, error: 'Unknown application.' };
   if (process.platform === 'win32') {
-    execFile('explorer.exe', [application.id], { shell: false, detached: true, stdio: 'ignore' }, (error) => {
-      if (error) console.error(`[JARVIS] app launch failed code=${typeof error.code === 'number' ? error.code : 1}`);
+    const args = application.id.startsWith('uwp:')
+      ? [`shell:AppsFolder\\${application.id.slice(4)}`]
+      : [application.id];
+    await new Promise((resolve, reject) => {
+      execFile('explorer.exe', args, { shell: false, detached: true, stdio: 'ignore', windowsHide: true }, (error) => {
+        if (error) reject(error); else resolve();
+      });
+    }).catch((error) => {
+      console.error(`[JARVIS] app launch failed: ${error.message}`);
+      throw new Error('Windows could not open that app.');
     });
-    hidePanelWindow();
+    recordAppLaunch(id);
     return { ok: true };
   }
   const desktopId = application.id.endsWith('.desktop') ? application.id.slice(0, -8) : application.id;
-  execFile('gtk-launch', [desktopId], { shell: false, detached: true, stdio: 'ignore' }, (error) => {
-    if (error) console.error(`[JARVIS] app launch failed code=${typeof error.code === 'number' ? error.code : 1}`);
-  });
-  hidePanelWindow();
+  await new Promise((resolve, reject) => execFile('gtk-launch', [desktopId], { shell: false, detached: true, stdio: 'ignore' }, (error) => error ? reject(error) : resolve()));
+  recordAppLaunch(id);
   return { ok: true };
+}
+
+async function getApplicationIcon(id) {
+  const application = (await getApplicationList()).find((item) => item.id === id);
+  if (!application) return '';
+  const cacheDirectory = path.join(app.getPath('userData'), 'app-icons');
+  const cachePath = path.join(cacheDirectory, `${crypto.createHash('sha256').update(application.id).digest('hex')}-large.png`);
+  try {
+    const cachedIcon = fs.readFileSync(cachePath);
+    if (cachedIcon.length) return `data:image/png;base64,${cachedIcon.toString('base64')}`;
+  } catch (_) {}
+  const target = application.icon || application.resolvedPath || application.id;
+  try {
+    const image = await app.getFileIcon(target, { size: 'large' });
+    if (image.isEmpty()) return '';
+    const png = image.toPNG();
+    fs.mkdirSync(cacheDirectory, { recursive: true });
+    fs.writeFileSync(cachePath, png);
+    return `data:image/png;base64,${png.toString('base64')}`;
+  } catch (_) { return ''; }
+}
+
+ipcMain.handle('get-apps', async () => (await getApplicationList()).map(({ id, name, icon }) => ({ id, name, icon })));
+ipcMain.handle('launch-app', (event, id) => {
+  return launchApplication(id).then((result) => {
+    if (result.ok) hidePanelWindow();
+    return result;
+  });
 });
 
+ipcMain.handle('apps:list', (event, refresh) => getApplicationList(refresh === true));
+ipcMain.handle('apps:launch', async (event, id) => {
+  if (typeof id !== 'string') return { ok: false, error: 'Invalid app selection.' };
+  const result = await launchApplication(id);
+  if (result.ok) closeCapsuleConsole();
+  return result;
+});
+ipcMain.handle('apps:icon', (event, id) => typeof id === 'string' ? getApplicationIcon(id) : '');
+
+ipcMain.handle('clipboard:list', (event, query) => clipboardService.list(store, typeof query === 'string' ? query.slice(0, 500) : ''));
+ipcMain.handle('clipboard:sync', () => clipboardService.captureCurrent(store));
+ipcMain.handle('clipboard:copy', (event, id) => typeof id === 'string' ? clipboardService.copy(store, id) : { ok: false, error: 'Invalid clipboard item.' });
+ipcMain.handle('clipboard:pin', (event, id, pinned) => typeof id === 'string' && clipboardService.updateItem(store, id, { pinned: pinned === true }));
+ipcMain.handle('clipboard:delete', (event, id) => typeof id === 'string' && clipboardService.remove(store, id));
+ipcMain.handle('clipboard:clear', () => clipboardService.clear(store));
+ipcMain.handle('clipboard:is-paused', () => clipboardService.isPaused(store));
+ipcMain.handle('clipboard:set-paused', (event, paused) => clipboardService.setPaused(store, paused === true));
+
 ipcMain.handle('power-action', async (event, id) => {
-  const powerActions = process.platform === 'win32' ? WINDOWS_POWER_ACTIONS : LINUX_POWER_ACTIONS;
-  if (powerActionRunning || !Object.prototype.hasOwnProperty.call(powerActions, id)) return { ok: false };
-  powerActionRunning = true;
-  const [commandName, args] = powerActions[id];
-  const result = await runFixedCommand(commandName, args);
-  powerActionRunning = false;
-  if (result.code !== 0) console.error(`[JARVIS] power action ${id} failed code=${result.code}`);
-  if (result.code === 0 && (id === 'lock' || id === 'sleep' || id === 'restart' || id === 'shutdown')) hidePanelWindow();
-  return { ok: result.code === 0 };
+  const result = await powerService.performAction(typeof id === 'string' ? id : '');
+  if (result.ok && !result.scheduled) hidePanelWindow();
+  return result;
 });
 
 ipcMain.handle('get-controls', getControlsData);

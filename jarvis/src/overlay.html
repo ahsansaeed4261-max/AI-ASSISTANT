@@ -15,7 +15,7 @@
     .nav-group,.nav-tools{height:100%;display:flex;align-items:center;gap:5px}.nav-group{min-width:0;overflow:auto;scrollbar-width:none}.nav-group::-webkit-scrollbar{display:none}
     .nav-button{position:relative;width:38px;height:32px;display:grid;place-items:center;flex:0 0 auto;border:0;border-radius:999px;background:transparent;color:#8c8e96;cursor:pointer;transition:color 130ms ease,background 130ms ease,transform 130ms var(--ease-out)}.nav-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.nav-button:hover{color:#f7f7f8;background:#ffffff0b}.nav-button.active{color:#fff;background:#242529}.nav-button:active{transform:scale(.94)}.nav-button:focus-visible,.action:focus-visible,.provider-chip:focus-visible,.send:focus-visible,.model-button:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .nav-button[title]:hover::after{content:attr(title);position:absolute;z-index:10;top:37px;left:50%;transform:translateX(-50%);padding:5px 8px;border:1px solid #303137;border-radius:7px;background:#1b1c20;color:#e9e9eb;font-size:10px;white-space:nowrap;pointer-events:none}
-    .page{display:none;min-height:0;animation:page-in 170ms var(--ease-out)}.page.active{display:block}@keyframes page-in{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+    .page{display:none;min-height:0;max-height:328px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#3b3c43 transparent;animation:page-in 170ms var(--ease-out)}.page.active{display:block}.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{border-radius:5px;background:#ffffff22}@keyframes page-in{from{opacity:.72;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
     .home-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:12px}.card{min-width:0;border:1px solid var(--line);border-radius:23px;background:var(--card)}
     .integration-card{position:relative;min-height:142px;display:flex;align-items:center;gap:15px;padding:17px 18px}.mascot{width:112px;height:94px;flex:0 0 auto;overflow:visible;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 100'%3E%3Cellipse cx='60' cy='50' rx='46' ry='24' fill='none' stroke='%23927cff' stroke-width='3' transform='rotate(-20 60 50)'/%3E%3Cpath d='M60 17c20 0 35 15 35 35S80 87 60 87 25 72 25 52 40 17 60 17Z' fill='%23263242' stroke='%237ea5c8' stroke-width='2'/%3E%3Cpath d='M43 50h34' stroke='%2383e5ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='60' cy='50' r='3' fill='white'/%3E%3Ccircle cx='19' cy='34' r='4' fill='%23c4b5fd'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 8px 12px #0006)}.mascot.small{width:86px;height:76px}.mascot>*{display:none!important}
     .integration-info{min-width:0;flex:1}.integration-title{display:flex;align-items:center;gap:6px;white-space:nowrap}.integration-title strong{font-size:14px;font-weight:650}.integration-title span{color:var(--muted);font-size:12px}.status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:var(--dim)}.integration-sub{display:flex;align-items:center;gap:7px;margin-top:9px;color:var(--muted);font-size:11px}.integration-sub .status-dot{background:var(--red)}.integration-sub.ready .status-dot{background:var(--green)}.integration-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}.action{padding:0;border:0;background:transparent;color:#d0d1d5;font-size:11px;font-weight:620;cursor:pointer}.action:hover{color:#fff}
@@ -34,11 +34,228 @@
     @media(max-width:700px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats-card{min-height:120px}}
     /* Stats reading scale: preserve the dense overview while improving legibility. */
     .stats-topline{padding-bottom:12px}.stats-topline h2{font-size:17px}.stats-topline p{font-size:12px}.live-pill{font-size:11px;padding:6px 10px}.stats-grid{gap:10px}.stats-card{min-height:143px;padding:13px 14px;border-radius:19px}.stats-card-head{gap:10px}.stats-card-head>div{gap:4px}.stats-kicker{font-size:11px}.stats-card-head strong{font-size:13px}.stats-big{font-size:24px}.stats-tag{font-size:11px;max-width:115px}.sparkline{height:37px;margin-top:7px}.sparkline.short{height:25px}.network-chart{height:39px}.stats-foot{font-size:10px;margin-top:7px}.meter{height:6px;margin-top:17px}.network-rates{gap:20px}.network-rates b{font-size:11px}.network-rates small{font-size:10px}.core-row{height:16px;margin-top:8px;gap:4px}.gpu-list{gap:8px;margin-top:11px;max-height:83px}.gpu-row>span:first-child{font-size:12px}.gpu-usage{font-size:12px}.gpu-meta{font-size:10px;margin-top:-6px}.stats-empty{font-size:11px}.stats-subline{font-size:10px;margin-top:9px}.stats-error{font-size:10px}
+    .utility-page{padding:1px}.utility-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 3px 10px}.utility-title{min-width:0}.utility-title h2{margin:0;font-size:16px;font-weight:620}.utility-title p{margin:4px 0 0;color:var(--muted);font-size:11px}.utility-controls{display:flex;align-items:center;gap:7px}.utility-search{width:220px;height:34px;padding:0 11px;border:1px solid #ffffff12;border-radius:11px;outline:none;background:#17181c;color:var(--white);font-size:11px}.utility-search::placeholder{color:#777982}.utility-search:focus{border-color:#ffffff35;box-shadow:0 0 0 3px #ffffff08}.small-action{height:31px;padding:0 10px;border:1px solid #ffffff12;border-radius:10px;background:#191a1e;color:#d0d1d6;font-size:10px;cursor:pointer}.small-action:hover{background:#222329}.small-action:active{transform:scale(.97)}.small-action[aria-pressed="true"]{border-color:#f0a65055;color:#ffd08b}.apps-section{margin-bottom:9px}.apps-section-title{display:flex;justify-content:space-between;align-items:center;margin:0 3px 6px;color:#aeb0b8;font-size:10px;font-weight:580}.apps-section-title span{color:#696c74;font-size:9px;font-weight:400}.apps-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-height:153px;overflow:auto;padding:1px 2px 5px;scrollbar-width:thin;scrollbar-color:#44454d transparent}.app-entry{min-width:0;height:42px;display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid #ffffff0a;border-radius:12px;background:#141519;color:#e4e5e8;text-align:left;cursor:pointer;transition:background 130ms ease,border-color 130ms ease,transform 130ms var(--ease-out)}.app-entry:hover,.app-entry.highlight{background:#202126;border-color:#ffffff20}.app-entry:active{transform:scale(.985)}.app-icon{width:27px;height:27px;display:grid;place-items:center;flex:0 0 auto;overflow:hidden;border-radius:8px;background:#24252a;color:#b8bac1;font-size:11px;font-weight:650}.app-icon img{width:100%;height:100%;object-fit:contain}.app-name{min-width:0;overflow:hidden;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.app-kind{margin-left:auto;color:#70727a;font-size:8px}.apps-empty,.clipboard-empty{display:grid;place-items:center;min-height:116px;border:1px dashed #ffffff16;border-radius:17px;color:var(--muted);font-size:11px;text-align:center}.apps-status,.clipboard-status{min-height:13px;margin:6px 3px 0;color:#ffb3a7;font-size:9px}.clipboard-toolbar{display:flex;align-items:center;gap:8px}.clipboard-toggle{display:flex;align-items:center;gap:6px;color:#aeb0b7;font-size:10px;white-space:nowrap}.clipboard-toggle input{accent-color:#e9bd76}.clipboard-list{display:grid;gap:6px;max-height:225px;overflow:auto;padding:1px 2px 5px;scrollbar-width:thin;scrollbar-color:#44454d transparent}.clipboard-entry{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 10px;border:1px solid #ffffff0b;border-radius:13px;background:#141519}.clipboard-entry:hover{border-color:#ffffff1d;background:#18191d}.clipboard-preview{min-width:0;flex:1;display:flex;align-items:center;gap:9px;border:0;background:transparent;color:#e2e3e7;text-align:left;cursor:pointer}.clipboard-preview-text{min-width:0;overflow:hidden;font-size:10px;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}.clipboard-thumb{width:42px;height:34px;flex:0 0 auto;object-fit:cover;border-radius:7px;background:#25262b}.clipboard-meta{display:block;margin-top:3px;color:#737680;font-size:8px}.clipboard-buttons{display:flex;gap:3px}.clipboard-icon-button{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#8b8e97;font-size:12px;cursor:pointer}.clipboard-icon-button:hover{background:#ffffff10;color:#fff}.clipboard-icon-button.pinned{color:#f0bd70}.clipboard-warning{padding:5px 3px 0;color:#71747d;font-size:9px}
+  </style>
+  <style>
+    .app-view-toggle{white-space:nowrap}
+    .apps-list.list-view{grid-template-columns:minmax(0,1fr)}
+    .app-entry:focus-visible,.clipboard-preview:focus-visible,.clipboard-icon-button:focus-visible,.app-view-toggle:focus-visible,.app-stepper:focus-visible{outline:2px solid #f2f2f4;outline-offset:2px}
+    .app-stepper{width:28px;height:30px;display:grid;place-items:center;border:1px solid #ffffff12;border-radius:9px;background:#191a1e;color:#d0d1d6;font-size:12px;cursor:pointer}
+    .app-stepper:hover{background:#222329}
+    @media(max-width:700px){.utility-head{align-items:flex-start;flex-direction:column}.utility-controls{width:100%;flex-wrap:wrap}.utility-search{min-width:120px;flex:1}}
+    .wallpaper-page{padding:2px 3px 4px}
+    .wallpaper-head,.wallpaper-head-actions,.wallpaper-folder-line,.wallpaper-browser-head,.wallpaper-preview-actions{display:flex;align-items:center;gap:8px}
+    .wallpaper-head{justify-content:space-between;margin-bottom:6px}
+    .wallpaper-head h2{margin:0;font-size:15px;font-weight:620}
+    .wallpaper-head p{margin:3px 0 0;color:var(--muted);font-size:9px}
+    .wallpaper-head-actions{justify-content:flex-end;flex-wrap:wrap}
+    .wallpaper-folder-line{min-width:0;justify-content:space-between;margin:0 1px 8px;color:#777a83;font-size:9px}
+    .wallpaper-folder-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wallpaper-layout{display:grid;grid-template-columns:1fr 1.18fr;gap:9px}
+    .wallpaper-panel{min-width:0;padding:9px;border:1px solid var(--line);border-radius:17px;background:#131417}
+    .wallpaper-monitor{position:relative;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border:1px solid #ffffff26;border-radius:9px;background:linear-gradient(135deg,#20232b,#111216);box-shadow:0 7px 18px #0007}
+    .wallpaper-monitor::after{position:absolute;inset:0;border:1px solid #ffffff10;border-radius:inherit;content:"";pointer-events:none}
+    .wallpaper-preview-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 220ms ease}
+    .wallpaper-preview-image.loaded{opacity:1}
+    .wallpaper-desktop-icons{position:absolute;top:10px;left:9px;display:grid;gap:7px;color:#fff;font-size:7px;text-shadow:0 1px 4px #000}
+    .wallpaper-desktop-icons span{display:grid;justify-items:center;gap:2px}
+    .wallpaper-desktop-icons i{width:13px;height:13px;border:1px solid #ffffff9c;border-radius:3px;background:#ffffff25}
+    .wallpaper-taskbar{position:absolute;right:0;bottom:0;left:0;height:13px;display:flex;align-items:center;justify-content:center;gap:5px;background:#111216b8;backdrop-filter:blur(8px)}
+    .wallpaper-taskbar i{width:7px;height:7px;border-radius:2px;background:#ffffffa0}
+    .wallpaper-preview-placeholder{max-width:85%;color:#777a83;font-size:9px;text-align:center;line-height:1.45}
+    .wallpaper-preview-name{display:block;overflow:hidden;margin:7px 0;color:#d9dade;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+    .wallpaper-preview-actions{justify-content:space-between}
+    .wallpaper-browser-head{justify-content:space-between;margin-bottom:7px}
+    .wallpaper-browser-head strong{font-size:10px;font-weight:580}
+    .wallpaper-browser-head span{color:var(--muted);font-size:8px}
+    .wallpaper-display-select{max-width:150px;height:26px;padding:0 7px;border:1px solid #ffffff14;border-radius:8px;background:#1a1b1f;color:#c6c7cc;font-size:9px}
+    .wallpaper-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:171px;overflow:auto;padding:1px 2px 3px;scrollbar-width:thin;scrollbar-color:#44454d transparent}
+    .wallpaper-tile{min-width:0;padding:4px;border:1px solid #ffffff0c;border-radius:10px;background:#191a1e;text-align:left;cursor:pointer;transition:background 140ms ease,border-color 140ms ease,transform 140ms var(--ease-out)}
+    .wallpaper-tile:hover,.wallpaper-tile.selected{border-color:#a5a0ff75;background:#24232b}
+    .wallpaper-tile:active{transform:scale(.98)}
+    .wallpaper-tile:focus-visible,.wallpaper-display-select:focus-visible{outline:2px solid #dddafe;outline-offset:2px}
+    .wallpaper-tile-image{display:block;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:6px;background:linear-gradient(140deg,#272a32,#15161a);object-fit:cover}
+    .wallpaper-tile-name{display:block;overflow:hidden;margin:5px 2px 1px;color:#b9bbc2;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+    .wallpaper-empty{grid-column:1/-1;min-height:104px;display:grid;place-items:center;padding:14px;border:1px dashed #ffffff18;border-radius:12px;color:var(--muted);font-size:9px;text-align:center;line-height:1.5}
+    .wallpaper-status{min-height:12px;margin:5px 2px 0;color:#aeb0b7;font-size:9px}
+    .wallpaper-status.error{color:#ff9eaa}
+    .wallpaper-context{position:fixed;z-index:30;min-width:145px;padding:4px;border:1px solid #ffffff1c;border-radius:11px;background:#202126;box-shadow:0 10px 28px #000a}
+    .wallpaper-context[hidden]{display:none}
+    .wallpaper-context button{width:100%;padding:8px 9px;border:0;border-radius:7px;background:transparent;color:#dedfe3;text-align:left;font-size:10px;cursor:pointer}
+    .wallpaper-context button:hover{background:#ffffff12}
+    @media(max-width:700px){.wallpaper-layout{grid-template-columns:1fr}.wallpaper-grid{grid-template-columns:repeat(4,minmax(0,1fr));max-height:125px}}
+    .power-page{padding:3px 4px 5px}
+    .power-heading{display:flex;align-items:flex-end;justify-content:space-between;margin:0 3px 11px}
+    .power-heading h2{margin:0;font-size:17px;font-weight:630;letter-spacing:-.25px}
+    .power-heading p{margin:4px 0 0;color:var(--muted);font-size:10px}
+    .power-heading .small-action{height:27px}
+    .power-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .power-tile{position:relative;min-height:91px;display:flex;align-items:center;gap:11px;padding:12px;border:1px solid #ffffff0c;border-radius:16px;background:#151619;text-align:left;cursor:pointer;transition:transform 150ms var(--ease-out),background 150ms ease,border-color 150ms ease,opacity 150ms ease}
+    .power-tile:hover:not(:disabled){transform:translateY(-2px);background:#1d1e22;border-color:#ffffff25}
+    .power-tile:active:not(:disabled){transform:scale(.985)}
+    .power-tile:focus-visible,.power-cancel:focus-visible,.power-enable:focus-visible,.power-refresh:focus-visible{outline:2px solid #f2f2f4;outline-offset:2px}
+    .power-tile:disabled{cursor:not-allowed;opacity:.42}
+    .power-tile.danger .power-glyph{color:#f2a789}
+    .power-glyph{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;border:1px solid #ffffff10;border-radius:13px;background:#222329;color:#e2e3e7}
+    .power-glyph svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+    .power-tile-copy{min-width:0}
+    .power-tile-copy strong{display:block;font-size:11px;font-weight:610}
+    .power-tile-copy span{display:block;margin-top:4px;color:#858892;font-size:9px;line-height:1.35}
+    .power-status{min-height:14px;margin:8px 4px 0;color:#9da0a9;font-size:9px}
+    .power-status.error{color:#ff9eaa}
+    .hibernate-notice{display:flex;align-items:center;gap:10px;margin-top:9px;padding:9px 11px;border:1px solid #e9ad5640;border-radius:13px;background:#251d14;color:#d7c1a1}
+    .hibernate-notice[hidden]{display:none}
+    .hibernate-copy{min-width:0;flex:1;font-size:9px;line-height:1.45}
+    .hibernate-copy strong{display:block;margin-bottom:2px;color:#f1d8ad;font-size:10px}
+    .power-enable{height:28px;padding:0 9px;border:1px solid #e9ad5655;border-radius:9px;background:#342718;color:#f4d49e;font-size:9px;white-space:nowrap;cursor:pointer}
+    .power-enable:disabled{opacity:.5;cursor:wait}
+    .power-confirmation{display:flex;align-items:center;gap:10px;margin-top:10px;padding:9px 11px;border:1px solid #edaa7e55;border-radius:13px;background:#251b17;color:#f2d7c8}
+    .power-confirmation[hidden]{display:none}
+    .power-countdown{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border:1px solid #edaa7e66;border-radius:50%;color:#ffbc96;font-size:13px;font-variant-numeric:tabular-nums}
+    .power-confirm-copy{min-width:0;flex:1;font-size:9px;line-height:1.4}
+    .power-confirm-copy strong{display:block;color:#ffe8dc;font-size:10px}
+    .power-cancel{height:28px;padding:0 10px;border:1px solid #ffffff20;border-radius:9px;background:#302a28;color:#ece1dc;font-size:9px;cursor:pointer}
+    .power-cancel:disabled{opacity:.5;cursor:wait}
+    @media(max-width:700px){.power-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.power-tile{min-height:78px;padding:9px}.power-glyph{width:32px;height:32px;flex-basis:32px;border-radius:11px}}
+  </style>
+  <style>
+    :root{--accent:#e8a48b;--accent-soft:#ffd4c4;--accent-deep:#9b6154}
+    html,body{font-family:"Segoe UI Variable","Segoe UI",system-ui,sans-serif;text-rendering:optimizeLegibility}
+    .island{transition:width 260ms var(--ease-out),transform 260ms var(--ease-out),opacity 180ms ease}
+    .page{max-height:520px;overscroll-behavior-y:contain;scroll-behavior:smooth}
+    .page::-webkit-scrollbar{width:8px}
+    .page::-webkit-scrollbar-thumb{border:2px solid transparent;border-radius:8px;background:#77747a99;background-clip:padding-box}
+    .page::-webkit-scrollbar-thumb:hover{background:#a8a1a199;background-clip:padding-box}
+    @keyframes page-in{from{opacity:.86}to{opacity:1}}
+    .nav-button{width:42px;height:38px}
+    .nav-button svg{width:21px;height:21px;stroke-width:1.8}
+    .nav-tools{gap:1px}
+    .nav-tools .nav-button{width:38px}
+    .compact-label[hidden]{display:none}
+    .activity-glow{animation:none;opacity:.62}
+    .app-view-toggle{display:none}
+    .integration-title strong{font-size:17px}
+    .integration-title span,.integration-sub{font-size:13px}
+    .action,.provider-chip .provider-name{font-size:13px}
+    .panel-heading{font-size:14px}
+    .panel-heading small,.setting-copy span,.control-feedback{font-size:12px}
+    .setting-copy strong{font-size:14px}
+    .range-value{font-size:14px}
+    .message,.prompt{font-size:14px}
+    .model-button{font-size:12px}
+    .file-type,.drop-hint{font-size:12px}
+    .transcript,.activity-label,.home-footer,.analytics-toggle{font-size:12px}
+    .metric strong{font-size:16px}
+    .metric span{font-size:12px}
+    .calendar-day.weekday{font-size:11px}
+    .dashboard-tile{min-height:104px}
+    .media-page-status{min-height:18px;margin-top:10px;color:#c9bcb7;font-size:12px}
+    .stats-topline{display:none}
+    .stats-page{padding-top:3px}
+    .performance-gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 12px}
+    .performance-gauge{min-width:0;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 10px;border:1px solid #ffffff12;border-radius:24px;background:radial-gradient(ellipse at 50% 0%,#e8a48b14,transparent 68%),#141518}
+    .gauge-face{position:relative;width:132px;height:132px;display:grid;place-items:center}
+    .gauge-face svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform:rotate(-90deg)}
+    .gauge-track,.gauge-value{fill:none;stroke-width:7;stroke-linecap:round}
+    .gauge-track{stroke:#ffffff13}
+    .gauge-track{stroke-dasharray:74 10}
+    .gauge-value{stroke:var(--gauge-color,var(--accent));stroke-dasharray:301.6;stroke-dashoffset:301.6;opacity:0;transition:stroke-dashoffset 500ms var(--ease-out),opacity 180ms ease}
+    .gauge-copy{position:relative;z-index:1;text-align:center}
+    .gauge-reading{display:block;color:#f4eee9;font-size:29px;font-weight:650;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+    .gauge-label{display:block;margin-top:2px;color:#c9bcb7;font-size:13px;font-weight:600}
+    .gauge-caption{max-width:100%;overflow:hidden;color:#8c8583;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .stats-grid{gap:12px}
+    .stats-card{min-height:154px;padding:16px;border-radius:20px}
+    .stats-kicker,.stats-foot,.network-rates small,.stats-subline{font-size:12px}
+    .stats-card-head strong{font-size:15px}
+    .stats-big{font-size:26px}
+    .stats-tag,.network-rates b{font-size:13px}
+    .gpu-row>span:first-child,.gpu-usage{font-size:13px}
+    .stats-error{font-size:12px}
+    .utility-head{margin-bottom:14px}
+    .utility-title h2,.wallpaper-head h2{font-size:20px;letter-spacing:-.35px}
+    .utility-title p,.wallpaper-head p{font-size:13px}
+    .utility-search{height:40px;font-size:13px}
+    .small-action{height:36px;padding:0 13px;font-size:12px}
+    .apps-list,.apps-list.list-view{grid-template-columns:minmax(0,1fr);gap:7px;max-height:none;overflow:visible;padding:2px}
+    .app-entry{height:62px;gap:13px;padding:7px 12px;border-radius:15px}
+    .app-icon{width:44px;height:44px;border-radius:12px;font-size:17px}
+    .app-icon img{image-rendering:auto}
+    .app-name{font-size:15px;font-weight:570}
+    .app-kind{font-size:11px}
+    .apps-section{margin-bottom:15px}
+    .apps-section-title{margin-bottom:8px;font-size:13px}
+    .apps-section-title span{font-size:12px}
+    .apps-empty,.apps-status{font-size:12px}
+    .clipboard-preview-text{font-size:13px}
+    .clipboard-meta,.clipboard-warning,.clipboard-status{font-size:11px}
+    .wallpaper-page{padding:2px 3px 8px}
+    .wallpaper-head{margin-bottom:12px}
+    .wallpaper-head-actions{gap:7px}
+    .wallpaper-folder-line{margin-bottom:12px;font-size:12px}
+    .wallpaper-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+    .wallpaper-layout>.wallpaper-panel:first-child{position:relative;min-height:244px;padding:0;overflow:hidden;border-radius:24px;background:#171619}
+    .wallpaper-layout>.wallpaper-panel:first-child::after{position:absolute;inset:0;background:linear-gradient(180deg,#08080a00 35%,#08080ad9 100%);content:"";pointer-events:none}
+    .wallpaper-monitor{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;background:radial-gradient(ellipse at 65% 20%,#e8a48b33,transparent 55%),#171619;box-shadow:none}
+    .wallpaper-monitor::after,.wallpaper-desktop-icons,.wallpaper-taskbar{display:none}
+    .wallpaper-preview-placeholder{font-size:14px}
+    .wallpaper-preview-name{position:absolute;z-index:2;right:16px;bottom:62px;left:16px;margin:0;color:#fff;font-size:16px;font-weight:600}
+    .wallpaper-preview-actions{position:absolute;z-index:2;right:14px;bottom:14px;left:14px;justify-content:flex-end;gap:9px}
+    .wallpaper-display-select{max-width:200px;height:38px;padding:0 11px;font-size:12px}
+    .wallpaper-browser-head{margin-bottom:10px}
+    .wallpaper-browser-head strong{font-size:15px}
+    .wallpaper-browser-head span{font-size:12px}
+    .wallpaper-grid{display:flex;gap:12px;max-height:none;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+    .wallpaper-tile{width:220px;flex:0 0 220px;padding:6px;border-radius:15px;scroll-snap-align:start}
+    .wallpaper-tile-image{aspect-ratio:16/10;border-radius:10px}
+    .wallpaper-tile-name{margin:8px 4px 4px;font-size:13px}
+    .wallpaper-empty{width:100%;min-height:120px;font-size:13px}
+    .wallpaper-status{font-size:12px}
+    .power-page{padding:3px 4px 8px}
+    .power-heading{align-items:center;margin:0 3px 12px}
+    .power-heading>div{display:none}
+    .power-grid{gap:11px}
+    .power-tile{min-height:102px;padding:15px;border-radius:19px}
+    .power-glyph{width:46px;height:46px;flex-basis:46px;border-radius:15px;color:var(--accent-soft)}
+    .power-glyph svg{width:23px;height:23px}
+    .power-tile-copy strong{font-size:14px}
+    .power-tile-copy span{font-size:12px}
+    .power-status,.hibernate-copy,.power-confirm-copy,.hibernate-copy strong,.power-confirm-copy strong{font-size:12px}
+    .power-enable,.power-cancel{height:36px;padding:0 13px;font-size:12px}
+    .power-countdown{width:38px;height:38px;flex-basis:38px;font-size:16px}
+    .dashboard-widgets{display:grid;grid-template-columns:.8fr 1.2fr;gap:12px;margin-top:12px}
+    .dashboard-tile{min-width:0;padding:15px 17px;border:1px solid #ffffff10;border-radius:20px;background:linear-gradient(145deg,#e8a48b12,transparent 65%),#141518}
+    .dashboard-label{display:block;margin-bottom:7px;color:#a49b99;font-size:12px}
+    .dashboard-clock{display:block;color:#f4eee9;font-size:29px;font-weight:650;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+    .dashboard-date{display:block;margin-top:3px;color:#b7aaa6;font-size:13px}
+    .calendar-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:9px;color:#eee5e1;font-size:13px;font-weight:600}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;text-align:center}
+    .calendar-day{display:grid;place-items:center;min-height:23px;color:#a69d99;font-size:11px;font-variant-numeric:tabular-nums}
+    .calendar-day.weekday{color:#827a77;font-size:10px;font-weight:600}
+    .calendar-day.today{border-radius:50%;background:var(--accent-deep);color:#fff}
+    .media-page{padding:4px}
+    .media-stage{min-height:320px;display:grid;grid-template-columns:1fr 1.1fr .8fr;align-items:center;gap:22px;padding:24px;border:1px solid #ffffff12;border-radius:26px;background:radial-gradient(ellipse at 18% 48%,#e8a48b1e,transparent 34%),radial-gradient(ellipse at 82% 20%,#a98eb51b,transparent 38%),#141518}
+    .record-art{position:relative;width:min(100%,190px);aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle at center,#18181c 0 5px,#262329 6px 7px);box-shadow:0 18px 42px #0008}
+    .record-art::before{position:absolute;inset:24%;border:1px solid #ffffff23;border-radius:50%;background:radial-gradient(circle at 35% 28%,#f6c5a0,#9b6154 53%,#45313a);content:""}
+    .record-art::after{position:absolute;top:calc(50% - 4px);left:calc(50% - 4px);width:8px;height:8px;border-radius:50%;background:#181619;content:""}
+    .media-center{min-width:0;text-align:center}
+    .media-eyebrow{color:#a49b99;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+    .media-title{display:block;overflow:hidden;margin:11px 0 4px;color:#f7f0ed;font-size:21px;font-weight:620;text-overflow:ellipsis;white-space:nowrap}
+    .media-detail{color:#aaa09c;font-size:14px}
+    .media-actions-large{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:22px}
+    .media-page-button{width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#e7dcd7;font-size:21px;cursor:pointer;transition:background 150ms ease,transform 150ms var(--ease-out)}
+    .media-page-button:hover{background:#ffffff10}
+    .media-page-button:active{transform:scale(.94)}
+    .media-page-button.play{width:54px;height:54px;background:var(--accent-deep);color:#fff;font-size:23px}
+    .media-page-button:focus-visible{outline:2px solid var(--accent-soft);outline-offset:3px}
+    .media-unavailable{max-width:170px;color:#918986;font-size:12px;line-height:1.5;text-align:right}
+    @media(max-width:700px){.performance-gauge{min-height:155px;padding:10px 5px}.gauge-face{width:105px;height:105px}.gauge-reading{font-size:24px}.gauge-label{font-size:12px}.media-stage{grid-template-columns:1fr;justify-items:center;gap:16px}.record-art{width:132px}.media-unavailable{text-align:center}.dashboard-widgets{grid-template-columns:1fr 1.4fr}}
+    @media(prefers-reduced-motion:reduce){.page{scroll-behavior:auto}}
   </style>
 </head>
 <body>
   <main class="island compact tucked" id="island" data-state="idle" aria-label="JARVIS island">
-    <div class="compact-face" id="compactFace"><span class="compact-orb"></span><span class="compact-label" id="compactLabel">JARVIS</span></div>
+    <div class="compact-face" id="compactFace" aria-label="Open JARVIS"><span class="compact-orb"></span><span class="compact-label" id="compactLabel" hidden></span></div>
     <header class="topbar">
       <nav class="nav-group" id="navigation" aria-label="Island pages">
         <button class="nav-button active" data-page="home" title="Home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg></button>
@@ -46,6 +263,7 @@
         <button class="nav-button" data-page="drop" title="Add files" aria-label="Add files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         <span class="nav-divider"></span>
         <button class="nav-button" data-page="controls" title="Controls" aria-label="Controls"><svg viewBox="0 0 24 24"><path d="M4 6h16M8 6v12M4 18h16M16 18V6"/></svg></button>
+        <button class="nav-button" data-page="media" title="Media" aria-label="Media"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
         <button class="nav-button" data-page="stats" title="Stats" aria-label="Stats"><svg viewBox="0 0 24 24"><path d="M4 19V9m8 10V5m8 14v-7"/></svg></button>
         <button class="nav-button" data-page="clipboard" title="Clipboard" aria-label="Clipboard"><svg viewBox="0 0 24 24"><path d="M8 5H5v16h14V5h-3M9 3h6v4H9zM8 12h8m-8 4h8"/></svg></button>
         <button class="nav-button" data-page="apps" title="Apps" aria-label="Apps"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
@@ -64,6 +282,10 @@
           <div class="integration-info"><div class="integration-title"><span class="status-dot" id="mainProviderDot"></span><strong>JARVIS</strong><span>Assistant</span></div><div class="integration-sub" id="integrationStatus"><i class="status-dot"></i><span id="integrationText">Checking providers…</span></div><div class="integration-actions"><button class="action" id="openChatAction">Open chat</button><button class="action" id="openSettingsAction">Settings…</button></div></div>
         </article>
         <article class="card provider-card" id="providerCard" aria-label="AI providers"></article>
+      </div>
+      <div class="dashboard-widgets">
+        <article class="dashboard-tile"><span class="dashboard-label">Local time</span><time class="dashboard-clock" id="dashboardClock"></time><span class="dashboard-date" id="dashboardDate"></span></article>
+        <article class="dashboard-tile"><div class="calendar-heading"><span id="calendarMonth"></span><span>Today</span></div><div class="calendar-grid" id="calendarGrid" role="grid" aria-label="Current month"></div></article>
       </div>
       <div class="home-footer"><button class="analytics-toggle" id="analyticsToggle" aria-expanded="false">Analytics <span id="analyticsChevron">⌄</span></button><span>Private · stored on this device</span></div>
       <div class="analytics" id="analytics"><div class="metric"><strong>—</strong><span>Requests today</span></div><div class="metric"><strong>—</strong><span>Tokens used</span></div><div class="metric"><strong>—</strong><span>Avg. latency</span></div><div class="metric"><strong>—</strong><span>Errors</span></div></div>
@@ -90,14 +312,26 @@
         </div>
         <div class="controls-column">
           <article class="control-panel"><h2 class="panel-heading">Sound <small id="audioAvailability">Default output</small></h2><div class="range-row"><button class="media-control" id="muteButton" title="Toggle mute" aria-label="Toggle mute"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4zm13-1a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg></button><input id="volumeRange" type="range" min="0" max="100" value="0" disabled aria-label="Output volume"/><span class="range-value" id="volumeValue">—</span></div><div class="control-feedback" id="soundFeedback"></div></article>
-          <article class="control-panel"><h2 class="panel-heading">Power mode <small>Active plan</small></h2><select class="power-select" id="powerScheme" disabled aria-label="Power mode"><option>Loading power profiles…</option></select><div class="control-feedback" id="powerFeedback"></div><div class="media-now" style="margin-top:12px"><div class="album-art">◒</div><div class="media-copy"><strong id="nowPlayingTitle">Media controls</strong><span id="nowPlayingDetail">Use the active Windows media session</span></div></div><div class="media-actions"><button class="media-control" data-media="previous" title="Previous track" aria-label="Previous track">‹</button><button class="media-control" data-media="play-pause" title="Play or pause" aria-label="Play or pause">▶</button><button class="media-control" data-media="next" title="Next track" aria-label="Next track">›</button></div><div class="control-feedback" id="mediaFeedback"></div></article>
+          <article class="control-panel"><h2 class="panel-heading">Power mode <small>Active plan</small></h2><select class="power-select" id="powerScheme" disabled aria-label="Power mode"><option>Loading power profiles…</option></select><div class="control-feedback" id="powerFeedback"></div></article>
           <article class="control-panel"><h2 class="panel-heading">Battery <small id="batteryStatus">Checking…</small></h2><div class="media-now"><div class="album-art">▰</div><div class="media-copy"><strong id="batteryValue">—</strong><span id="batteryDetail">Battery information</span></div></div></article>
         </div>
       </div>
     </section>
+    <section class="page media-page" data-page-view="media">
+      <article class="media-stage">
+        <div class="record-art" aria-hidden="true"></div>
+        <div class="media-center"><span class="media-eyebrow">Now playing</span><strong class="media-title" id="mediaPageTitle">Media controls</strong><span class="media-detail" id="mediaPageDetail">Send playback controls to your active app</span><div class="media-actions-large"><button class="media-page-button" type="button" data-media="previous" aria-label="Previous track" title="Previous track">|‹</button><button class="media-page-button play" type="button" data-media="play-pause" aria-label="Play or pause" title="Play or pause">▶</button><button class="media-page-button" type="button" data-media="next" aria-label="Next track" title="Next track">›|</button></div><div class="media-page-status" id="mediaPageStatus" role="status"></div></div>
+        <p class="media-unavailable">Track details and album artwork are provided by your media app when available.</p>
+      </article>
+    </section>
     <section class="page" data-page-view="stats">
       <div class="stats-dashboard">
         <div class="stats-topline"><div><h2>System overview</h2><p>Live metrics from this device</p></div><span class="live-pill"><i></i> Live</span></div>
+        <div class="performance-gauges" aria-label="Live performance">
+          <article class="performance-gauge" style="--gauge-color:#e8a48b"><div class="gauge-face"><svg viewBox="0 0 112 112" aria-hidden="true"><circle class="gauge-track" cx="56" cy="56" r="48"/><circle class="gauge-value" id="cpuGaugeArc" cx="56" cy="56" r="48"/></svg><div class="gauge-copy"><strong class="gauge-reading" id="cpuGaugeValue">—%</strong><span class="gauge-label">CPU</span></div></div><span class="gauge-caption" id="cpuGaugeCaption">Processor usage</span></article>
+          <article class="performance-gauge" style="--gauge-color:#c58c79"><div class="gauge-face"><svg viewBox="0 0 112 112" aria-hidden="true"><circle class="gauge-track" cx="56" cy="56" r="48"/><circle class="gauge-value" id="memoryGaugeArc" cx="56" cy="56" r="48"/></svg><div class="gauge-copy"><strong class="gauge-reading" id="memoryGaugeValue">—%</strong><span class="gauge-label">Memory</span></div></div><span class="gauge-caption" id="memoryGaugeCaption">RAM in use</span></article>
+          <article class="performance-gauge" style="--gauge-color:#a889a3"><div class="gauge-face"><svg viewBox="0 0 112 112" aria-hidden="true"><circle class="gauge-track" cx="56" cy="56" r="48"/><circle class="gauge-value" id="gpuGaugeArc" cx="56" cy="56" r="48"/></svg><div class="gauge-copy"><strong class="gauge-reading" id="gpuGaugeValue">—%</strong><span class="gauge-label">GPU</span></div></div><span class="gauge-caption" id="gpuGaugeCaption">Graphics usage unavailable</span></article>
+        </div>
         <div class="stats-grid">
           <article class="stats-card cpu-card"><div class="stats-card-head"><div><span class="stats-kicker">Processor</span><strong id="statsCpuModel">CPU</strong></div><span class="stats-big" id="statsCpuValue">—</span></div><canvas class="sparkline" id="cpuChart" aria-label="CPU history"></canvas><div class="stats-foot"><span id="statsCpuCores">— cores</span><span id="statsCpuSpeed">— MHz</span></div><div class="core-row" id="coreRow"></div></article>
           <article class="stats-card memory-card"><div class="stats-card-head"><div><span class="stats-kicker">Memory</span><strong>RAM</strong></div><span class="stats-big" id="statsMemoryPercent">—</span></div><div class="meter"><span id="memoryMeter"></span></div><div class="stats-foot"><span id="statsMemoryUsed">— used</span><span id="statsMemoryTotal">— total</span></div><canvas class="sparkline short" id="memoryChart" aria-label="Memory history"></canvas></article>
@@ -109,21 +343,69 @@
         <div class="stats-error" id="statsError" role="status"></div>
       </div>
     </section>
-    <section class="page" data-page-view="clipboard"><div class="placeholder-card">Clipboard · local history is being built next</div></section>
-    <section class="page" data-page-view="apps"><div class="placeholder-card">Apps · Start menu launcher is being built next</div></section>
-    <section class="page" data-page-view="wallpaper"><div class="placeholder-card">Wallpaper · preview and selection are being built next</div></section>
-    <section class="page" data-page-view="power"><div class="placeholder-card">Power · Windows actions are available in the existing panel backend</div></section>
+    <section class="page utility-page" data-page-view="clipboard">
+      <div class="utility-head"><div class="utility-title"><h2>Clipboard</h2><p>Recent items stay on this device</p></div><div class="utility-controls"><input class="utility-search" id="clipboardSearch" type="search" placeholder="Search clipboard history…" aria-label="Search clipboard history"/><label class="clipboard-toggle"><input type="checkbox" id="clipboardPause"/> Pause capture</label><button class="small-action" id="clipboardClear" type="button">Clear all</button></div></div>
+      <div class="clipboard-warning">Password-manager opt-out formats are respected. Clipboard contents are never written to logs.</div><div class="clipboard-list" id="clipboardList"><div class="clipboard-empty">Open this page to begin capturing copied text and images.</div></div><div class="clipboard-status" id="clipboardStatus" role="status"></div>
+    </section>
+    <section class="page utility-page" data-page-view="apps">
+      <div class="utility-head"><div class="utility-title"><h2>Apps</h2><p>Search and launch installed applications</p></div><div class="utility-controls"><input class="utility-search" id="appsSearch" type="search" placeholder="Search apps…" aria-label="Search applications"/><button class="small-action app-view-toggle" id="appsViewToggle" type="button" aria-pressed="true" aria-label="List view">List</button><button class="app-stepper" id="appsMoveUp" type="button" title="Previous app" aria-label="Previous app">↑</button><button class="app-stepper" id="appsMoveDown" type="button" title="Next app" aria-label="Next app">↓</button><button class="small-action" id="appsRefresh" type="button" title="Refresh app list">Refresh</button></div></div>
+      <div class="apps-section" id="recentAppsSection"><h3 class="apps-section-title">Recently used <span id="recentAppsCount"></span></h3><div class="apps-list" id="recentAppsList"></div></div>
+      <div class="apps-section" id="frequentAppsSection"><h3 class="apps-section-title">Most used <span id="frequentAppsCount"></span></h3><div class="apps-list" id="frequentAppsList"></div></div>
+      <div class="apps-section"><h3 class="apps-section-title"><span id="allAppsLabel">All apps</span><span id="allAppsCount"></span></h3><div class="apps-list" id="allAppsList"></div></div><div class="apps-status" id="appsStatus" role="status"></div>
+    </section>
+    <section class="page wallpaper-page" data-page-view="wallpaper">
+      <div class="wallpaper-head"><div><h2>Wallpaper</h2><p>Preview a scene, then bring it onto your desktop.</p></div><div class="wallpaper-head-actions"><button class="small-action" id="wallpaperTransition" type="button" aria-pressed="true">Reveal on</button><button class="small-action" id="wallpaperChooseFolder" type="button">Choose folder</button></div></div>
+      <div class="wallpaper-folder-line"><span class="wallpaper-folder-path" id="wallpaperFolderPath">Pictures · Wallpapers</span><button class="small-action" id="wallpaperRefresh" type="button">Refresh</button></div>
+      <div class="wallpaper-layout">
+        <article class="wallpaper-panel"><div class="wallpaper-monitor" id="wallpaperMonitor"><img class="wallpaper-preview-image" id="wallpaperPreviewImage" alt="Selected desktop wallpaper preview"/><div class="wallpaper-preview-placeholder" id="wallpaperPreviewPlaceholder">Choose a wallpaper to see it on your desktop.</div><div class="wallpaper-desktop-icons" aria-hidden="true"><span><i></i>Folder</span><span><i></i>Notes</span></div><div class="wallpaper-taskbar" aria-hidden="true"><i></i><i></i><i></i></div></div><span class="wallpaper-preview-name" id="wallpaperPreviewName">Nothing selected</span><div class="wallpaper-preview-actions"><select class="wallpaper-display-select" id="wallpaperDisplaySelect" aria-label="Choose displays"><option value="all">All displays</option></select><button class="small-action" id="wallpaperApply" type="button" disabled>Set wallpaper</button></div></article>
+        <article class="wallpaper-panel"><div class="wallpaper-browser-head"><strong>Library</strong><span id="wallpaperCount">0 images</span></div><div class="wallpaper-grid" id="wallpaperGrid"><div class="wallpaper-empty">Choose or add a folder of images to get started.</div></div></article>
+      </div>
+      <div class="wallpaper-status" id="wallpaperStatus" role="status"></div>
+    </section>
+    <section class="page power-page" data-page-view="power">
+      <div class="power-heading"><div><h2>Power</h2><p>Choose an action for this device.</p></div><button class="small-action power-refresh" id="powerRefresh" type="button">Refresh</button></div>
+      <div class="power-grid" id="powerGrid" role="group" aria-label="Power actions">
+        <button class="power-tile" type="button" data-power="lock" aria-label="Lock"><span class="power-glyph"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg></span><span class="power-tile-copy"><strong>Lock</strong><span>Lock this session</span></span></button>
+        <button class="power-tile" type="button" data-power="sleep" aria-label="Sleep"><span class="power-glyph"><svg viewBox="0 0 24 24"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.7 8.7 0 1 0 20.2 15.4Z"/><path d="m16 3 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/></svg></span><span class="power-tile-copy"><strong>Sleep</strong><span>Suspend and resume</span></span></button>
+        <button class="power-tile" type="button" data-power="hibernate" aria-label="Hibernate"><span class="power-glyph"><svg viewBox="0 0 24 24"><path d="M12 3v18m-7-4 14-8M5 7l14 10"/><path d="m12 3 1.2 2.4L16 6l-2 1.8.5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-1.8 2.8-.6z"/></svg></span><span class="power-tile-copy"><strong>Hibernate</strong><span id="hibernateTileDetail">Save session to disk</span></span></button>
+        <button class="power-tile danger" type="button" data-power="restart" aria-label="Restart"><span class="power-glyph"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17a8 8 0 0 0 13.6 2.4L20 17M4 7l2.4-2.4A8 8 0 0 1 20 7"/></svg></span><span class="power-tile-copy"><strong>Restart</strong><span>Restart in 5 seconds</span></span></button>
+        <button class="power-tile danger" type="button" data-power="shutdown" aria-label="Shut down"><span class="power-glyph"><svg viewBox="0 0 24 24"><path d="M12 2v9m6.4-6.4a9 9 0 1 1-12.8 0"/></svg></span><span class="power-tile-copy"><strong>Shut down</strong><span>Power off in 5 seconds</span></span></button>
+        <button class="power-tile" type="button" data-power="signout" aria-label="Sign out"><span class="power-glyph"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg></span><span class="power-tile-copy"><strong>Sign out</strong><span>End this session in 5 seconds</span></span></button>
+      </div>
+      <div class="hibernate-notice" id="hibernateNotice" hidden><div class="hibernate-copy"><strong>Hibernate is not enabled</strong><span id="hibernateNoticeText">You can enable it with administrator permission.</span></div><button class="power-enable" id="enableHibernate" type="button">Enable hibernate</button></div>
+      <div class="power-confirmation" id="powerConfirmation" role="status" aria-live="assertive" hidden><span class="power-countdown" id="powerCountdown">5</span><div class="power-confirm-copy"><strong id="powerConfirmTitle">Restart scheduled</strong><span id="powerConfirmText">Cancel before the countdown ends.</span></div><button class="power-cancel" id="cancelPowerAction" type="button">Cancel</button></div>
+      <div class="power-status" id="powerStatus" role="status"></div>
+    </section>
+    <div class="wallpaper-context" id="wallpaperContextMenu" hidden><button type="button" data-wallpaper-action="preview">Preview</button><button type="button" data-wallpaper-action="apply">Set as wallpaper</button><button type="button" data-wallpaper-action="folder">Show in folder</button></div>
   </main>
   <script>
     const island=document.getElementById('island');const pages=[...document.querySelectorAll('[data-page-view]')];const tabs=[...document.querySelectorAll('.nav-button[data-page]')];const providerCard=document.getElementById('providerCard');const integrationText=document.getElementById('integrationText');const integrationStatus=document.getElementById('integrationStatus');const chatMessages=document.getElementById('chatMessages');const chatPrompt=document.getElementById('chatPrompt');const chatForm=document.getElementById('chatForm');const fileList=document.getElementById('fileList');const dropCard=document.getElementById('dropCard');const dropHint=document.getElementById('dropHint');let activePage='home';let micRecording=false;let stagedFiles=[];let chatBusy=false;
+    const appIconObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;const icon=entry.target;appIconObserver.unobserve(icon);const image=icon.querySelector('img');window.overlayAPI.getAppIcon(icon.dataset.appId).then(src=>{if(src&&image?.isConnected){image.src=src;image.hidden=false;icon.firstChild.textContent='';}}).catch(()=>{});}),{rootMargin:'100px'});
     const pageForState=()=>island.dataset.state==='recording'||island.dataset.state==='thinking'?'activity':activePage;
     function reportHeight(){requestAnimationFrame(()=>window.overlayAPI.reportContentHeight(Math.ceil(island.getBoundingClientRect().height)));}
     function renderPage(){const visible=pageForState();pages.forEach(page=>page.classList.toggle('active',page.dataset.pageView===visible));tabs.forEach(tab=>tab.classList.toggle('active',tab.dataset.page===activePage));reportHeight();}
     function setExpanded(open,focus=false){island.classList.toggle('compact',!open);window.overlayAPI.setConsoleOpen(open);renderPage();syncPagePolling();if(open&&focus&&activePage==='chat')setTimeout(()=>chatPrompt.focus(),80);}
     document.getElementById('compactFace').addEventListener('click',()=>setExpanded(true));
-    let controlsRefreshTimer=null;let controlsLoaded=false;let brightnessTimer=null;let volumeTimer=null;let statsRefreshTimer=null;let statsLoading=false;
-    function syncPagePolling(){const expanded=!island.classList.contains('compact');const visible=pageForState();if(expanded&&visible==='controls'){if(!controlsRefreshTimer){loadControls();controlsRefreshTimer=setInterval(loadControls,15000);}}else{clearInterval(controlsRefreshTimer);controlsRefreshTimer=null;}if(expanded&&visible==='stats'){if(!statsRefreshTimer){loadStats();statsRefreshTimer=setInterval(loadStats,3000);}}else{clearInterval(statsRefreshTimer);statsRefreshTimer=null;}}
-    function showPage(name){activePage=name;renderPage();syncPagePolling();if(name==='chat')setTimeout(()=>chatPrompt.focus(),50);}
+    document.getElementById('appsSearch').addEventListener('input',()=>{appHighlight=0;renderApps();});
+    document.getElementById('appsRefresh').addEventListener('click',()=>loadApps(true));
+    document.getElementById('appsSearch').addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const delta=event.key==='ArrowDown'?1:-1;appHighlight=Math.max(0,Math.min(appRows.length-1,appHighlight+delta));refreshAppHighlight();const target=[...document.querySelectorAll('.app-entry')].find(button=>button.dataset.appId===appRows[appHighlight]?.id);target?.scrollIntoView({block:'nearest'});}else if(event.key==='Enter'){event.preventDefault();if(appRows[appHighlight])launchSelectedApp(appRows[appHighlight]);}});
+    document.getElementById('clipboardSearch').addEventListener('input',event=>{clipboardQuery=event.target.value;clearTimeout(clipboardSearchTimer);clipboardSearchTimer=setTimeout(async()=>{try{clipboardItems=await window.overlayAPI.getClipboardHistory(clipboardQuery);renderClipboard();reportHeight();}catch(error){document.getElementById('clipboardStatus').textContent=error?.message||'Search failed.';}},120);});
+    document.getElementById('clipboardPause').addEventListener('change',async event=>{clipboardPaused=await window.overlayAPI.setClipboardCapturePaused(event.target.checked);document.getElementById('clipboardStatus').textContent=clipboardPaused?'Clipboard capture paused.':'Clipboard capture resumed.';await loadClipboard();setTimeout(()=>{document.getElementById('clipboardStatus').textContent='';},1400);});
+    document.getElementById('clipboardClear').addEventListener('click',async()=>{if(!window.confirm('Clear all clipboard history?'))return;await window.overlayAPI.clearClipboardHistory();clipboardItems=[];renderClipboard();document.getElementById('clipboardStatus').textContent='Clipboard history cleared.';setTimeout(()=>{document.getElementById('clipboardStatus').textContent='';},1400);});
+    let controlsRefreshTimer=null;let controlsLoaded=false;let brightnessTimer=null;let volumeTimer=null;let statsRefreshTimer=null;let statsLoading=false;let clipboardRefreshTimer=null;let clipboardSearchTimer=null;let clipboardQuery='';let clipboardItems=[];let clipboardPaused=false;let applications=[];let appHighlight=0;let appRows=[];let appsLoaded=false;
+    function syncPagePolling(){const expanded=!island.classList.contains('compact');const visible=pageForState();if(expanded&&visible==='controls'){if(!controlsRefreshTimer){loadControls();controlsRefreshTimer=setInterval(loadControls,15000);}}else{clearInterval(controlsRefreshTimer);controlsRefreshTimer=null;}if(expanded&&visible==='stats'){if(!statsRefreshTimer){loadStats();statsRefreshTimer=setInterval(loadStats,3000);}}else{clearInterval(statsRefreshTimer);statsRefreshTimer=null;}if(expanded&&visible==='clipboard'){if(!clipboardRefreshTimer){loadClipboard();clipboardRefreshTimer=setInterval(syncClipboard,650);}}else{clearInterval(clipboardRefreshTimer);clipboardRefreshTimer=null;}if(expanded&&visible==='apps'&&!appsLoaded)loadApps();}
+    function showPage(name){activePage=name;renderPage();syncPagePolling();if(name==='chat')setTimeout(()=>chatPrompt.focus(),50);if(name==='apps')setTimeout(()=>document.getElementById('appsSearch').focus(),60);if(name==='clipboard')setTimeout(()=>document.getElementById('clipboardSearch').focus(),60);}
+    function appMatches(app,query){if(!query)return true;const name=app.name.toLowerCase();const words=query.toLowerCase().split(/\s+/).filter(Boolean);return words.every(word=>name.includes(word));}
+    function scoreApp(app,query){if(!query)return 0;const name=app.name.toLowerCase();const q=query.toLowerCase();if(name===q)return 0;if(name.startsWith(q))return 1;return name.includes(q)?2:3;}
+    function createAppRow(app,index){const button=document.createElement('button');button.type='button';button.className=`app-entry${index===appHighlight?' highlight':''}`;button.dataset.appId=app.id;button.title=`${app.name} · ${app.kind}`;const icon=document.createElement('span');icon.className='app-icon';icon.dataset.appId=app.id;icon.textContent=(app.name[0]||'?').toUpperCase();const image=document.createElement('img');image.alt='';image.hidden=true;icon.appendChild(image);appIconObserver.observe(icon);const name=document.createElement('span');name.className='app-name';name.textContent=app.name;const kind=document.createElement('span');kind.className='app-kind';kind.textContent=app.kind==='Store app'?'Store':'';button.append(icon,name,kind);button.addEventListener('click',()=>launchSelectedApp(app));button.addEventListener('mouseenter',()=>{appHighlight=appRows.findIndex(item=>item.id===app.id);refreshAppHighlight();});return button;}
+    function refreshAppHighlight(){document.querySelectorAll('.app-entry').forEach(button=>button.classList.toggle('highlight',button.dataset.appId===appRows[appHighlight]?.id));}
+    function renderAppSection(containerId,items,emptyText){const container=document.getElementById(containerId);container.replaceChildren();items.forEach((app,index)=>container.appendChild(createAppRow(app,index)));if(!items.length){const empty=document.createElement('div');empty.className='apps-empty';empty.textContent=emptyText;container.appendChild(empty);}}
+    function renderApps(){const query=document.getElementById('appsSearch').value.trim();const filtered=applications.filter(app=>appMatches(app,query)).sort((a,b)=>scoreApp(a,query)-scoreApp(b,query)||a.name.localeCompare(b.name));const recent=filtered.filter(app=>app.lastUsed).sort((a,b)=>b.lastUsed-a.lastUsed).slice(0,4);const frequent=filtered.filter(app=>app.launchCount>0).sort((a,b)=>b.launchCount-a.launchCount||a.name.localeCompare(b.name)).slice(0,4);const recentIds=new Set(recent.map(app=>app.id));const frequentOnly=frequent.filter(app=>!recentIds.has(app.id));appRows=[...recent,...frequentOnly,...filtered];appHighlight=Math.max(0,Math.min(appHighlight,Math.max(appRows.length-1,0)));renderAppSection('recentAppsList',recent,'Recently launched apps will appear here.');renderAppSection('frequentAppsList',frequentOnly,'Launch counts build as you use apps.');renderAppSection('allAppsList',filtered,query?'No apps match this search.':'No Start Menu apps found.');document.getElementById('recentAppsSection').hidden=!recent.length;document.getElementById('frequentAppsSection').hidden=!frequentOnly.length;document.getElementById('recentAppsCount').textContent=recent.length?`${recent.length}`:'';document.getElementById('frequentAppsCount').textContent=frequentOnly.length?`${frequentOnly.length}`:'';document.getElementById('allAppsLabel').textContent=query?'Matches':'All apps A–Z';document.getElementById('allAppsCount').textContent=`${filtered.length}`;refreshAppHighlight();}
+    async function loadApps(force=false){const status=document.getElementById('appsStatus');status.textContent='Loading installed apps…';try{if(force)appsLoaded=false;applications=await window.overlayAPI.getApps(force);appsLoaded=true;status.textContent=applications.length?'':'No compatible Start Menu applications were found.';renderApps();reportHeight();}catch(error){status.textContent=error?.message||'Could not load apps.';}}
+    async function launchSelectedApp(app){const status=document.getElementById('appsStatus');status.textContent=`Opening ${app.name}…`;try{const result=await window.overlayAPI.launchApp(app.id);if(!result?.ok)throw new Error(result?.error||'App could not be launched.');status.textContent='';applications=applications.map(item=>item.id===app.id?{...item,launchCount:(item.launchCount||0)+1,lastUsed:Date.now()}:item);renderApps();}catch(error){status.textContent=error?.message||'App could not be launched.';}}
+    async function loadClipboard(){try{clipboardPaused=await window.overlayAPI.isClipboardCapturePaused();document.getElementById('clipboardPause').checked=clipboardPaused;clipboardItems=await window.overlayAPI.getClipboardHistory(clipboardQuery);renderClipboard();await syncClipboard();}catch(error){document.getElementById('clipboardStatus').textContent=error?.message||'Clipboard history is unavailable.';}}
+    async function syncClipboard(){if(clipboardPaused||activePage!=='clipboard'||island.classList.contains('compact'))return;try{const result=await window.overlayAPI.syncClipboard();if(result.paused!==clipboardPaused){clipboardPaused=result.paused;document.getElementById('clipboardPause').checked=clipboardPaused;}if(result.item){const searchText=result.item.type==='image'?(result.item.preview||''):String(result.item.text||'');if(!clipboardQuery||searchText.toLowerCase().includes(clipboardQuery.toLowerCase())){clipboardItems=[result.item,...clipboardItems.filter(item=>item.id!==result.item.id)].slice(0,100);renderClipboard();reportHeight();}}}catch(_){}}
+    function renderClipboard(){const list=document.getElementById('clipboardList');list.replaceChildren();if(!clipboardItems.length){const empty=document.createElement('div');empty.className='clipboard-empty';empty.textContent=clipboardPaused?'Capture is paused. Resume to save new clipboard items.':'Copy text or an image anywhere; new items appear here.';list.appendChild(empty);return;}clipboardItems.forEach(item=>{const row=document.createElement('article');row.className='clipboard-entry';const preview=document.createElement('button');preview.type='button';preview.className='clipboard-preview';preview.title='Copy this item';if(item.type==='image'&&item.dataUrl){const image=document.createElement('img');image.className='clipboard-thumb';image.src=item.dataUrl;image.alt='Clipboard image';preview.appendChild(image);}const textWrap=document.createElement('span');textWrap.style.minWidth='0';const text=document.createElement('span');text.className='clipboard-preview-text';text.textContent=item.type==='image'?(item.preview||'Image'):item.preview||item.text||'';const meta=document.createElement('small');meta.className='clipboard-meta';meta.textContent=`${item.pinned?'Pinned · ':''}${new Date(item.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;textWrap.append(text,meta);preview.appendChild(textWrap);preview.addEventListener('click',async()=>{const result=await window.overlayAPI.copyClipboardItem(item.id);document.getElementById('clipboardStatus').textContent=result?.ok?'Copied to clipboard.':result?.error||'Copy failed.';setTimeout(()=>{document.getElementById('clipboardStatus').textContent='';},1400);});const actions=document.createElement('span');actions.className='clipboard-buttons';const pin=document.createElement('button');pin.type='button';pin.className=`clipboard-icon-button${item.pinned?' pinned':''}`;pin.textContent='◆';pin.title=item.pinned?'Unpin item':'Pin item';pin.setAttribute('aria-label',pin.title);pin.addEventListener('click',async()=>{await window.overlayAPI.pinClipboardItem(item.id,!item.pinned);await loadClipboard();});const remove=document.createElement('button');remove.type='button';remove.className='clipboard-icon-button';remove.textContent='×';remove.title='Delete item';remove.setAttribute('aria-label','Delete item');remove.addEventListener('click',async()=>{await window.overlayAPI.deleteClipboardItem(item.id);clipboardItems=clipboardItems.filter(entry=>entry.id!==item.id);renderClipboard();});actions.append(pin,remove);row.append(preview,actions);list.appendChild(row);});}
     async function loadControls(){try{const state=await window.overlayAPI.getControlsState();renderControls(state);controlsLoaded=true;}catch(error){document.getElementById('soundFeedback').textContent=error?.message||'System controls could not be read.';}}
     const bytesText=value=>{if(!Number.isFinite(value))return '—';if(value>=1073741824)return `${(value/1073741824).toFixed(1)} GB`;if(value>=1048576)return `${(value/1048576).toFixed(0)} MB`;if(value>=1024)return `${(value/1024).toFixed(0)} KB`;return `${Math.round(value)} B`;};
     const rateText=value=>`${bytesText(value)}/s`;
@@ -136,7 +418,6 @@
     document.getElementById('volumeRange').addEventListener('input',event=>{const value=Number(event.target.value);document.getElementById('volumeValue').textContent=`${value}%`;clearTimeout(volumeTimer);volumeTimer=setTimeout(async()=>{try{await window.overlayAPI.setVolume(value);}catch(error){document.getElementById('soundFeedback').textContent=error?.message||'Volume change failed';}},90);});
     document.getElementById('muteButton').addEventListener('click',async()=>{try{await window.overlayAPI.toggleMute();await loadControls();}catch(error){document.getElementById('soundFeedback').textContent=error?.message||'Mute toggle failed';}});
     document.getElementById('powerScheme').addEventListener('change',async event=>{const feedback=document.getElementById('powerFeedback');feedback.textContent='Changing power profile…';try{await window.overlayAPI.setPowerScheme(event.target.value);feedback.textContent='Power profile updated';setTimeout(()=>{feedback.textContent='';},1800);}catch(error){feedback.textContent=error?.message||'Could not change power profile';await loadControls();}});
-    document.querySelectorAll('[data-media]').forEach(button=>button.addEventListener('click',async()=>{const feedback=document.getElementById('mediaFeedback');feedback.textContent='Sending media command…';try{await window.overlayAPI.media(button.dataset.media);feedback.textContent='Media command sent';setTimeout(()=>{feedback.textContent='';},1200);}catch(error){feedback.textContent=error?.message||'Media command failed';}}));
     function mascotMarkup(){return ''}
     function renderProviders(providers){providerCard.replaceChildren();const connected=providers.filter(provider=>provider.connected).length;integrationText.textContent=connected?`${connected} provider${connected===1?'':'s'} ready`:'Add an API key in Settings to connect';integrationStatus.classList.toggle('ready',connected>0);document.getElementById('mainProviderDot').style.background=connected?'var(--green)':'var(--dim)';providers.forEach(provider=>{const button=document.createElement('button');button.className=`provider-chip ${provider.connected?'online':'offline'}`;button.style.setProperty('--provider-color',provider.color);button.title=`${provider.label}: ${provider.detail}`;button.innerHTML=`<span class="mini-blob" aria-hidden="true"></span><span class="provider-name"></span><span class="connection" aria-hidden="true"></span>`;button.querySelector('.provider-name').textContent=provider.label;button.addEventListener('click',()=>{showPage('home');integrationText.textContent=`${provider.label}: ${provider.detail}`;});providerCard.appendChild(button);});}
     async function loadProviders(){try{renderProviders(await window.overlayAPI.getProviderStatus());}catch(_){integrationText.textContent='Provider status unavailable';}}
@@ -149,11 +430,587 @@
     function renderFiles(){fileList.replaceChildren();stagedFiles.forEach(file=>{const chip=document.createElement('span');chip.className='file-item';chip.textContent=file.name;fileList.appendChild(chip);});if(stagedFiles.length){dropHint.textContent=`${stagedFiles.length} file${stagedFiles.length===1?'':'s'} staged · content processing is coming next`;document.getElementById('chatAttachmentNote').textContent=`Attached: ${stagedFiles.map(file=>file.name).join(', ')}`;document.getElementById('chatAttachmentNote').classList.add('visible');}else{dropHint.textContent='Files can be staged for your next chat';document.getElementById('chatAttachmentNote').classList.remove('visible');}}
     function stageFiles(files){const accepted=Array.from(files||[]).filter(file=>file.size<=10*1024*1024).slice(0,8);stagedFiles=accepted.map(file=>({name:file.name,type:file.type,size:file.size}));renderFiles();}
     dropCard.addEventListener('dragover',event=>{event.preventDefault();dropCard.classList.add('dragging');});dropCard.addEventListener('dragleave',()=>dropCard.classList.remove('dragging'));dropCard.addEventListener('drop',event=>{event.preventDefault();dropCard.classList.remove('dragging');stageFiles(event.dataTransfer.files);});dropCard.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showPage('chat');}});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(activePage!=='home')showPage('home');else setExpanded(false);return;}if(event.ctrlKey&&/^[1-9]$/.test(event.key)){const pageTabs=tabs.slice(0,9);pageTabs[Number(event.key)-1]?.click();}});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(activePage!=='home')showPage('home');else setExpanded(false);return;}if(event.ctrlKey&&/^[0-9]$/.test(event.key)){const index=event.key==='0'?9:Number(event.key)-1;tabs[index]?.click();}});
     function setMicListening(listening){micRecording=listening;document.getElementById('compactLabel').textContent=listening?'Listening…':'JARVIS';}
     function applyState(data={}){let next=data.state||'idle';if(next==='hide')next='idle';island.dataset.state=next;if(next==='recording'){island.classList.remove('compact','tucked');document.getElementById('compactLabel').textContent='Listening…';document.getElementById('activityLabel').textContent='Listening…';setMicListening(true);}else if(next==='thinking'){island.classList.remove('compact','tucked');document.getElementById('compactLabel').textContent='Thinking…';document.getElementById('activityLabel').textContent='Thinking…';setMicListening(false);}else if(next==='done'||next==='error'){island.classList.remove('compact','tucked');document.getElementById('compactLabel').textContent=data.text|| (next==='done'?'Done':'Needs attention');document.getElementById('activityLabel').textContent=data.text||'Finished';setMicListening(false);setTimeout(()=>{if(island.dataset.state===next){island.dataset.state='idle';island.classList.add('compact');renderPage();syncPagePolling();}},2200);}else{setMicListening(false);if(!island.classList.contains('compact'))island.dataset.state='idle';}renderPage();syncPagePolling();}
     window.overlayAPI.onUpdateState(applyState);window.overlayAPI.onConsoleState(({open})=>setExpanded(Boolean(open)));window.overlayAPI.onPeekState(({peeked})=>island.classList.toggle('tucked',!peeked&&island.classList.contains('compact')&&island.dataset.state==='idle'));
     loadProviders();renderPage();
+  </script>
+  <script>
+    (() => {
+      const appLists = [...document.querySelectorAll('.apps-list')];
+      const layoutButton = document.getElementById('appsViewToggle');
+      let listView = true;
+      const applyLayout = () => {
+        appLists.forEach((list) => list.classList.toggle('list-view', listView));
+        layoutButton.textContent = listView ? 'Grid' : 'List';
+        layoutButton.setAttribute('aria-pressed', String(listView));
+        layoutButton.setAttribute('aria-label', `Switch to ${listView ? 'grid' : 'list'} view`);
+      };
+      layoutButton.addEventListener('click', () => {
+        listView = !listView;
+        applyLayout();
+      });
+      const baseRenderApps = renderApps;
+      renderApps = function renderAppsWithUniqueNavigation() {
+        baseRenderApps();
+        appRows = [...new Map(appRows.map((application) => [application.id, application])).values()];
+        refreshAppHighlight();
+      };
+      const subsequenceScore = (name, token) => {
+        let cursor = 0;
+        let gaps = 0;
+        for (const character of token) {
+          const position = name.indexOf(character, cursor);
+          if (position < 0) return Number.POSITIVE_INFINITY;
+          gaps += position - cursor;
+          cursor = position + 1;
+        }
+        return gaps + name.length / 1000;
+      };
+      const scoreToken = (name, token) => {
+        const index = name.indexOf(token);
+        return index >= 0 ? index + (name.length - token.length) / 1000 : subsequenceScore(name, token);
+      };
+      appMatches = (application, query) => query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+        .every((token) => Number.isFinite(scoreToken(application.name.toLowerCase(), token)));
+      scoreApp = (application, query) => query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+        .reduce((score, token) => score + scoreToken(application.name.toLowerCase(), token), 0);
+      const moveHighlight = (delta) => {
+        if (!appRows.length) return;
+        appHighlight = Math.max(0, Math.min(appRows.length - 1, appHighlight + delta));
+        refreshAppHighlight();
+        const selectedId = appRows[appHighlight].id;
+        document.querySelector(`.app-entry[data-app-id="${CSS.escape(selectedId)}"]`)
+          ?.scrollIntoView({ block: 'nearest' });
+      };
+      document.getElementById('appsMoveUp').addEventListener('click', () => moveHighlight(-1));
+      document.getElementById('appsMoveDown').addEventListener('click', () => moveHighlight(1));
+      applyLayout();
+    })();
+  </script>
+  <script>
+    (() => {
+      const wallpaperGrid = document.getElementById('wallpaperGrid');
+      const wallpaperPreview = document.getElementById('wallpaperPreviewImage');
+      const wallpaperPlaceholder = document.getElementById('wallpaperPreviewPlaceholder');
+      const wallpaperContextMenu = document.getElementById('wallpaperContextMenu');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let wallpaperState = null;
+      let selectedWallpaperId = '';
+      let contextWallpaperId = '';
+      let wallpaperLoaded = false;
+
+      const thumbnailObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const image = entry.target;
+          thumbnailObserver.unobserve(image);
+          const id = image.dataset.wallpaperId;
+          window.overlayAPI.getWallpaperThumbnail(id).then((src) => {
+            if (image.isConnected && image.dataset.wallpaperId === id) image.src = src;
+          }).catch(() => {
+            if (image.isConnected) image.alt = 'Wallpaper preview unavailable';
+          });
+        });
+      }, { root: wallpaperGrid, rootMargin: '60px' });
+
+      function setWallpaperStatus(message = '', isError = false) {
+        const status = document.getElementById('wallpaperStatus');
+        status.textContent = message;
+        status.classList.toggle('error', isError);
+      }
+
+      function updatePreview() {
+        const wallpaper = wallpaperState?.items?.find((item) => item.id === selectedWallpaperId);
+        document.querySelectorAll('.wallpaper-tile').forEach((tile) => {
+          const selected = tile.dataset.wallpaperId === selectedWallpaperId;
+          tile.classList.toggle('selected', selected);
+          tile.setAttribute('aria-pressed', String(selected));
+        });
+        document.getElementById('wallpaperPreviewName').textContent = wallpaper?.name || 'Nothing selected';
+        document.getElementById('wallpaperApply').disabled = !wallpaper || wallpaperState?.available !== true;
+        wallpaperPreview.classList.remove('loaded');
+        wallpaperPreview.removeAttribute('src');
+        wallpaperPlaceholder.hidden = Boolean(wallpaper);
+        if (!wallpaper) return;
+        const id = wallpaper.id;
+        window.overlayAPI.getWallpaperThumbnail(id).then((src) => {
+          if (selectedWallpaperId !== id || !wallpaperPreview.isConnected) return;
+          wallpaperPreview.src = src;
+          wallpaperPreview.classList.add('loaded');
+        }).catch((error) => {
+          if (selectedWallpaperId === id) {
+            wallpaperPlaceholder.hidden = false;
+            wallpaperPlaceholder.textContent = error?.message || 'Preview is unavailable.';
+          }
+        });
+      }
+
+      function renderWallpaperGrid() {
+        thumbnailObserver.disconnect();
+        wallpaperGrid.replaceChildren();
+        const items = wallpaperState?.items || [];
+        document.getElementById('wallpaperCount').textContent = `${items.length} image${items.length === 1 ? '' : 's'}`;
+        if (!wallpaperState?.available) {
+          const empty = document.createElement('div');
+          empty.className = 'wallpaper-empty';
+          empty.textContent = 'Wallpaper controls are only available on Windows.';
+          wallpaperGrid.appendChild(empty);
+          return;
+        }
+        if (!items.length) {
+          const empty = document.createElement('div');
+          empty.className = 'wallpaper-empty';
+          empty.textContent = `No supported images found. Add JPG, PNG, BMP, GIF, or TIFF files to the selected folder.`;
+          wallpaperGrid.appendChild(empty);
+          return;
+        }
+        items.forEach((item) => {
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = 'wallpaper-tile';
+          tile.dataset.wallpaperId = item.id;
+          tile.title = `${item.name} · Right-click for more actions`;
+          tile.setAttribute('aria-label', item.name);
+          tile.setAttribute('aria-pressed', String(item.id === selectedWallpaperId));
+          const image = document.createElement('img');
+          image.className = 'wallpaper-tile-image';
+          image.alt = '';
+          image.dataset.wallpaperId = item.id;
+          thumbnailObserver.observe(image);
+          const name = document.createElement('span');
+          name.className = 'wallpaper-tile-name';
+          name.textContent = item.name;
+          tile.append(image, name);
+          tile.addEventListener('click', () => {
+            selectedWallpaperId = item.id;
+            updatePreview();
+            setWallpaperStatus('');
+          });
+          tile.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            contextWallpaperId = item.id;
+            selectedWallpaperId = item.id;
+            updatePreview();
+            wallpaperContextMenu.hidden = false;
+            wallpaperContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 158)}px`;
+            wallpaperContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 112)}px`;
+          });
+          tile.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              selectedWallpaperId = item.id;
+              updatePreview();
+              applySelectedWallpaper();
+            }
+            if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+            event.preventDefault();
+            const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+            const currentIndex = items.findIndex((entry) => entry.id === item.id);
+            const next = items[Math.max(0, Math.min(items.length - 1, currentIndex + direction))];
+            if (next) {
+              selectedWallpaperId = next.id;
+              updatePreview();
+              wallpaperGrid.querySelector(`[data-wallpaper-id="${CSS.escape(next.id)}"]`)?.focus();
+            }
+          });
+          wallpaperGrid.appendChild(tile);
+        });
+        updatePreview();
+      }
+
+      async function loadWallpapers(force = false) {
+        if (wallpaperLoaded && !force) return;
+        setWallpaperStatus('Loading wallpaper library…');
+        try {
+          wallpaperState = await window.overlayAPI.getWallpaperState();
+          wallpaperLoaded = true;
+          document.getElementById('wallpaperFolderPath').textContent = wallpaperState.folder || 'Wallpaper folder unavailable';
+          document.getElementById('wallpaperFolderPath').title = wallpaperState.folder || '';
+          const displaySelect = document.getElementById('wallpaperDisplaySelect');
+          const currentDisplay = displaySelect.value;
+          displaySelect.replaceChildren();
+          const allDisplays = document.createElement('option');
+          allDisplays.value = 'all';
+          allDisplays.textContent = 'All displays';
+          displaySelect.appendChild(allDisplays);
+          (wallpaperState.displays || []).forEach((display) => {
+            const option = document.createElement('option');
+            option.value = display.id;
+            option.textContent = display.name;
+            displaySelect.appendChild(option);
+          });
+          if ([...displaySelect.options].some((option) => option.value === currentDisplay)) displaySelect.value = currentDisplay;
+          const transition = document.getElementById('wallpaperTransition');
+          transition.setAttribute('aria-pressed', String(wallpaperState.transitionEnabled));
+          transition.textContent = wallpaperState.transitionEnabled ? 'Reveal on' : 'Reveal off';
+          const availableIds = new Set((wallpaperState.items || []).map((item) => item.id));
+          if (!availableIds.has(selectedWallpaperId)) {
+            selectedWallpaperId = availableIds.has(wallpaperState.selectedId)
+              ? wallpaperState.selectedId
+              : wallpaperState.items?.[0]?.id || '';
+          }
+          renderWallpaperGrid();
+          setWallpaperStatus(wallpaperState.items?.length ? '' : 'The folder is empty or does not exist yet.');
+          reportHeight();
+        } catch (error) {
+          wallpaperLoaded = false;
+          setWallpaperStatus(error?.message || 'Could not load the wallpaper folder.', true);
+        }
+      }
+
+      async function applySelectedWallpaper() {
+        if (!selectedWallpaperId) return;
+        const button = document.getElementById('wallpaperApply');
+        button.disabled = true;
+        setWallpaperStatus('Applying wallpaper…');
+        try {
+          const result = await window.overlayAPI.applyWallpaper(
+            selectedWallpaperId,
+            document.getElementById('wallpaperDisplaySelect').value,
+            wallpaperState?.transitionEnabled !== false && !reducedMotion.matches,
+          );
+          if (!result?.ok) throw new Error(result?.error || 'Could not set the wallpaper.');
+          setWallpaperStatus(result.transitionError
+            ? `Wallpaper set. ${result.transitionError}`
+            : `Wallpaper set${result.name ? `: ${result.name}` : ''}.`);
+        } catch (error) {
+          setWallpaperStatus(error?.message || 'Could not set the wallpaper.', true);
+        } finally {
+          button.disabled = !selectedWallpaperId;
+        }
+      }
+
+      const previousShowPage = showPage;
+      showPage = function showPageWithWallpaper(name) {
+        if (name !== 'wallpaper') wallpaperContextMenu.hidden = true;
+        previousShowPage(name);
+        if (name === 'wallpaper') loadWallpapers();
+      };
+
+      document.getElementById('wallpaperChooseFolder').addEventListener('click', async () => {
+        try {
+          const result = await window.overlayAPI.chooseWallpaperFolder();
+          if (!result?.ok) {
+            if (result?.error) setWallpaperStatus(result.error, true);
+            return;
+          }
+          wallpaperLoaded = false;
+          selectedWallpaperId = '';
+          await loadWallpapers(true);
+        } catch (error) {
+          setWallpaperStatus(error?.message || 'Could not choose a wallpaper folder.', true);
+        }
+      });
+      document.getElementById('wallpaperRefresh').addEventListener('click', () => {
+        wallpaperLoaded = false;
+        loadWallpapers(true);
+      });
+      document.getElementById('wallpaperApply').addEventListener('click', applySelectedWallpaper);
+      document.getElementById('wallpaperTransition').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const enabled = button.getAttribute('aria-pressed') !== 'true';
+        try {
+          await window.overlayAPI.setWallpaperTransition(enabled);
+          if (wallpaperState) wallpaperState.transitionEnabled = enabled;
+          button.setAttribute('aria-pressed', String(enabled));
+          button.textContent = enabled ? 'Reveal on' : 'Reveal off';
+          setWallpaperStatus(enabled ? 'Reveal transition enabled.' : 'Reveal transition disabled.');
+        } catch (error) {
+          setWallpaperStatus(error?.message || 'Could not update transition preference.', true);
+        }
+      });
+      wallpaperContextMenu.addEventListener('click', async (event) => {
+        const action = event.target.closest('[data-wallpaper-action]')?.dataset.wallpaperAction;
+        const id = contextWallpaperId;
+        wallpaperContextMenu.hidden = true;
+        if (!action || !id) return;
+        if (action === 'preview') {
+          selectedWallpaperId = id;
+          updatePreview();
+        } else if (action === 'apply') {
+          selectedWallpaperId = id;
+          updatePreview();
+          await applySelectedWallpaper();
+        } else if (action === 'folder') {
+          const result = await window.overlayAPI.showWallpaperInFolder(id);
+          if (!result?.ok) setWallpaperStatus(result?.error || 'Could not open the wallpaper location.', true);
+        }
+      });
+      document.addEventListener('pointerdown', (event) => {
+        if (!wallpaperContextMenu.contains(event.target)) wallpaperContextMenu.hidden = true;
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !wallpaperContextMenu.hidden) {
+          event.stopImmediatePropagation();
+          wallpaperContextMenu.hidden = true;
+        }
+      }, true);
+    })();
+  </script>
+  <script>
+    (() => {
+      const powerButtons = [...document.querySelectorAll('.power-tile')];
+      const confirmation = document.getElementById('powerConfirmation');
+      const powerStatus = document.getElementById('powerStatus');
+      let powerState = null;
+      let countdownTimer = null;
+      let pendingAction = null;
+
+      function setPowerStatus(message = '', isError = false) {
+        powerStatus.textContent = message;
+        powerStatus.classList.toggle('error', isError);
+      }
+
+      function setPowerButtonsDisabled(disabled) {
+        powerButtons.forEach((button) => {
+          const isUnsupportedHibernate = button.dataset.power === 'hibernate'
+            && powerState?.hibernationSupported === false;
+          button.disabled = disabled || isUnsupportedHibernate || powerState?.available === false;
+        });
+      }
+
+      async function loadPowerState() {
+        setPowerStatus('Checking power options…');
+        try {
+          powerState = await window.overlayAPI.getPowerState();
+          if (!powerState?.available) {
+            setPowerStatus(powerState?.reason || 'Power actions are unavailable on this device.', true);
+          } else {
+            setPowerStatus('');
+          }
+          const hibernateButton = powerButtons.find((button) => button.dataset.power === 'hibernate');
+          const hibernateDetail = document.getElementById('hibernateTileDetail');
+          const hibernateNotice = document.getElementById('hibernateNotice');
+          const hibernateNoticeText = document.getElementById('hibernateNoticeText');
+          const canEnable = powerState?.available
+            && powerState.hibernationSupported
+            && !powerState.hibernationEnabled;
+          hibernateNotice.hidden = !canEnable;
+          hibernateNoticeText.textContent = powerState?.reason || 'Enable hibernation using administrator permission.';
+          if (powerState?.hibernationEnabled) hibernateDetail.textContent = 'Save session to disk';
+          else if (powerState?.hibernationSupported) hibernateDetail.textContent = 'Enable before using';
+          else hibernateDetail.textContent = 'Not available on this device';
+          hibernateButton.title = powerState?.reason || '';
+          setPowerButtonsDisabled(Boolean(pendingAction));
+        } catch (error) {
+          powerState = { available: false, hibernationEnabled: false, hibernationSupported: false };
+          setPowerButtonsDisabled(false);
+          setPowerStatus(error?.message || 'Power options could not be read.', true);
+        }
+      }
+
+      function clearCountdown() {
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = null;
+        pendingAction = null;
+        confirmation.hidden = true;
+        setPowerButtonsDisabled(false);
+      }
+
+      function updateCountdown() {
+        if (!pendingAction) return;
+        const remaining = Math.max(0, Math.ceil((pendingAction.deadline - Date.now()) / 1000));
+        document.getElementById('powerCountdown').textContent = String(remaining);
+        if (remaining > 0) return;
+        const action = pendingAction.action;
+        clearCountdown();
+        setPowerStatus(`${action === 'signout' ? 'Sign out' : action === 'restart' ? 'Restart' : 'Shut down'} is proceeding.`);
+      }
+
+      async function cancelPowerAction() {
+        if (!pendingAction) return;
+        const cancelButton = document.getElementById('cancelPowerAction');
+        cancelButton.disabled = true;
+        try {
+          const result = await window.overlayAPI.cancelScheduledPowerAction();
+          if (!result?.ok) throw new Error(result?.error || 'Could not cancel the pending power action.');
+          clearCountdown();
+          setPowerStatus('Scheduled power action cancelled.');
+        } catch (error) {
+          setPowerStatus(error?.message || 'Could not cancel the pending power action.', true);
+        } finally {
+          cancelButton.disabled = false;
+        }
+      }
+
+      async function runPowerAction(action) {
+        if (pendingAction || !powerState?.available) return;
+        setPowerStatus('');
+        if (action === 'hibernate' && !powerState.hibernationEnabled) {
+          document.getElementById('hibernateNotice').hidden = !powerState.hibernationSupported;
+          setPowerStatus(
+            powerState.hibernationSupported
+              ? 'Enable hibernate first, then try again.'
+              : (powerState.reason || 'Hibernate is unavailable on this device.'),
+            true,
+          );
+          return;
+        }
+        try {
+          const result = await window.overlayAPI.performPowerAction(action);
+          if (!result?.ok) {
+            if (result?.enableHibernate) document.getElementById('hibernateNotice').hidden = false;
+            throw new Error(result?.error || `Could not ${action}.`);
+          }
+          if (result.scheduled) {
+            pendingAction = { action, deadline: Date.now() + result.seconds * 1000 };
+            document.getElementById('powerConfirmTitle').textContent = action === 'restart'
+              ? 'Restart scheduled'
+              : action === 'shutdown'
+                ? 'Shut down scheduled'
+                : 'Sign out scheduled';
+            document.getElementById('powerConfirmText').textContent = action === 'signout'
+              ? 'Your session will end when the countdown reaches zero.'
+              : 'Windows will begin this action when the countdown ends.';
+            confirmation.hidden = false;
+            setPowerButtonsDisabled(true);
+            updateCountdown();
+            countdownTimer = setInterval(updateCountdown, 100);
+            return;
+          }
+          setPowerStatus(action === 'lock'
+            ? 'Session locked.'
+            : action === 'sleep'
+              ? 'Entering sleep…'
+              : 'Entering hibernate…');
+        } catch (error) {
+          setPowerStatus(error?.message || `Could not ${action}.`, true);
+          if (action === 'hibernate') await loadPowerState();
+        }
+      }
+
+      const baseShowPage = showPage;
+      showPage = function showPageWithPowerConfirmation(name) {
+        if (pendingAction && name !== 'power') {
+          setPowerStatus('Cancel the scheduled action before leaving Power.');
+          return;
+        }
+        baseShowPage(name);
+        if (name === 'power') loadPowerState();
+      };
+
+      powerButtons.forEach((button) => {
+        button.addEventListener('click', () => runPowerAction(button.dataset.power));
+      });
+      document.getElementById('powerRefresh').addEventListener('click', loadPowerState);
+      document.getElementById('cancelPowerAction').addEventListener('click', cancelPowerAction);
+      document.getElementById('enableHibernate').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        setPowerStatus('Requesting administrator approval to enable hibernate…');
+        try {
+          const result = await window.overlayAPI.enableHibernate();
+          if (!result?.ok) throw new Error(result?.error || 'Could not enable hibernate.');
+          await loadPowerState();
+          setPowerStatus('Hibernate enabled.');
+        } catch (error) {
+          setPowerStatus(error?.message || 'Could not enable hibernate.', true);
+        } finally {
+          button.disabled = false;
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (pendingAction && event.key === 'Escape') {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          cancelPowerAction();
+          return;
+        }
+        if (activePage !== 'power' || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        const availableButtons = powerButtons.filter((button) => !button.disabled);
+        if (!availableButtons.length) return;
+        const currentIndex = availableButtons.indexOf(document.activeElement);
+        const current = currentIndex < 0 ? 0 : currentIndex;
+        const delta = event.key === 'ArrowLeft' ? -1
+          : event.key === 'ArrowRight' ? 1
+            : event.key === 'ArrowUp' ? -3 : 3;
+        const nextIndex = Math.max(0, Math.min(availableButtons.length - 1, current + delta));
+        event.preventDefault();
+        availableButtons[nextIndex].focus();
+      }, true);
+    })();
+  </script>
+  <script>
+    (() => {
+      const clock = document.getElementById('dashboardClock');
+      const date = document.getElementById('dashboardDate');
+      const monthLabel = document.getElementById('calendarMonth');
+      const calendar = document.getElementById('calendarGrid');
+      const weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+      function updateDashboard() {
+        const now = new Date();
+        clock.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        clock.dateTime = now.toISOString();
+        date.textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        monthLabel.textContent = now.toLocaleDateString([], { month: 'long', year: 'numeric' });
+        calendar.replaceChildren();
+        weekdays.forEach((weekday) => {
+          const cell = document.createElement('span');
+          cell.className = 'calendar-day weekday';
+          cell.textContent = weekday;
+          cell.setAttribute('aria-hidden', 'true');
+          calendar.appendChild(cell);
+        });
+        const firstWeekday = (new Date(now.getFullYear(), now.getMonth(), 1).getDay() + 6) % 7;
+        const dayCount = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        for (let index = 0; index < firstWeekday + dayCount; index += 1) {
+          const cell = document.createElement('span');
+          const day = index - firstWeekday + 1;
+          cell.className = `calendar-day${day === now.getDate() ? ' today' : ''}`;
+          if (day > 0) {
+            cell.textContent = String(day);
+            if (day === now.getDate()) cell.setAttribute('aria-current', 'date');
+          }
+          calendar.appendChild(cell);
+        }
+      }
+
+      updateDashboard();
+      setInterval(updateDashboard, 30_000);
+
+      const originalLoadStats = loadStats;
+      loadStats = async function loadStatsWithPerformanceGauges() {
+        await originalLoadStats();
+        const setGauge = (arcId, valueId, value, captionId, caption) => {
+          const numeric = Number(value);
+          const available = Number.isFinite(numeric);
+          const progress = available ? Math.max(0, Math.min(100, numeric)) : 0;
+          const arc = document.getElementById(arcId);
+          arc.style.strokeDashoffset = String(301.6 * (1 - progress / 100));
+          arc.style.opacity = available ? '1' : '0';
+          document.getElementById(valueId).textContent = available ? `${Math.round(progress)}%` : '—';
+          document.getElementById(captionId).textContent = caption;
+        };
+
+        const cpu = Number.parseFloat(document.getElementById('statsCpuValue').textContent);
+        const memory = Number.parseFloat(document.getElementById('statsMemoryPercent').textContent);
+        const gpuRow = document.querySelector('#gpuList .gpu-row');
+        const gpuUsage = Number.parseFloat(gpuRow?.querySelector('.gpu-usage')?.textContent || '');
+        setGauge('cpuGaugeArc', 'cpuGaugeValue', cpu, 'cpuGaugeCaption',
+          document.getElementById('statsCpuModel').textContent || 'Processor usage');
+        setGauge('memoryGaugeArc', 'memoryGaugeValue', memory, 'memoryGaugeCaption',
+          `${document.getElementById('statsMemoryUsed').textContent} · ${document.getElementById('statsMemoryTotal').textContent}`);
+        setGauge('gpuGaugeArc', 'gpuGaugeValue', gpuUsage, 'gpuGaugeCaption',
+          gpuRow?.querySelector('span')?.textContent || 'Graphics usage unavailable');
+      };
+
+      document.querySelectorAll('.media-page-button').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const status = document.getElementById('mediaPageStatus');
+          status.textContent = 'Sending playback command…';
+          try {
+            const result = await window.overlayAPI.media(button.dataset.media);
+            if (!result?.ok) throw new Error(result?.error || 'No compatible media control is available.');
+            status.textContent = 'Playback command sent.';
+          } catch (error) {
+            status.textContent = error?.message || 'Could not send the playback command.';
+          }
+        });
+      });
+    })();
   </script>
 </body>
 </html>
