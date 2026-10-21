@@ -38,6 +38,7 @@ function feedback(state, text) {
 
 let _resolveAudio = null;
 let busy = false;
+let recording = false;
 
 ipcMain.on('recorder-audio-ready', (event, base64audio) => {
   console.log(`[pipeline] recorder-audio-ready: ${base64audio ? base64audio.length : 0} base64 chars`);
@@ -83,23 +84,27 @@ function waitForAudio(timeoutMs = 30_000) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 async function startRecording() {
-  if (busy) {
-    console.log('[pipeline] startRecording: recording is already being processed');
-    return;
+  if (busy || recording) {
+    console.log('[pipeline] startRecording: recording or processing is already active');
+    return false;
   }
 
   const win = getRecorderWindow();
   if (!win) {
     console.error('[pipeline] startRecording: recorder window not found');
-    return;
+    return false;
   }
+  recording = true;
   console.log('[pipeline] startRecording: sending recorder-start');
   feedback('recording');
   win.webContents.send('recorder-start');
   console.log('[pipeline] recording started');
+  return true;
 }
 
 async function transcribeRecording() {
+  if (!recording) throw new Error('Dictation is not currently recording.');
+  recording = false;
   const win = getRecorderWindow();
   if (!win) throw new Error('Recorder window not found');
 
@@ -113,6 +118,11 @@ async function transcribeRecording() {
 }
 
 async function stopRecording() {
+  if (!recording) {
+    console.log('[pipeline] stopRecording: no active recording');
+    return false;
+  }
+  recording = false;
   busy = true;
   try {
     const win = getRecorderWindow();
@@ -205,6 +215,7 @@ async function stopRecording() {
 
     feedback('done');
     setTimeout(() => feedback('hide'), 1500);
+    return true;
   } finally {
     busy = false;
   }
@@ -219,6 +230,10 @@ async function startCommandRecording() {
 }
 
 async function stopCommandRecording() {
+  if (!recording) {
+    console.log('[pipeline] stopCommandRecording: no active recording');
+    return;
+  }
   busy = true;
   try {
     feedback('thinking', 'Thinking...');
@@ -243,11 +258,16 @@ function cancelCommand() {
   return command.cancelPendingCommand();
 }
 
+function isRecording() {
+  return recording;
+}
+
 module.exports = {
   startRecording,
   stopRecording,
   startCommandRecording,
   stopCommandRecording,
+  isRecording,
   confirmCommand,
   cancelCommand,
 };

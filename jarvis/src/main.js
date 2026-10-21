@@ -7,7 +7,7 @@
 // OPENAI_API_KEY and ANTHROPIC_API_KEY are available to getApiKeys().
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, session, desktopCapturer, shell } = require('electron');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const { promisify } = require('util');
@@ -16,6 +16,8 @@ const os = require('os');
 const path = require('path');
 const Store = require('electron-store');
 const trigger = require('./trigger');
+const controlsService = require('./services/controls');
+const statsService = require('./services/stats');
 
 // ── Fast exit for --action ────────────────────────────────────────────────────
 // If this process was launched with --action, run it and quit immediately.
@@ -124,10 +126,20 @@ function logKeyPresence(label) {
 let tray = null;
 let settingsWindow = null;
 let overlayWindow = null;
+let captureWindows = [];
+let capsuleConsoleOpen = false;
+let overlayPointerInteractive = false;
+let overlayHitTestTimer = null;
+let capsulePeeked = false;
+let overlayVisualState = 'idle';
+let consoleOpenBeforeActivity = false;
+let overlayContentHeight = 48;
+let capsuleOutsideSince = 0;
 let recorderWindow = null;
 let panelWindow = null;
 let panelHideTimer = null;
 let panelClosing = false;
+let panelDesiredOpen = false;
 let appCache = [];
 let appCacheAt = 0;
 let powerActionRunning = false;
@@ -135,11 +147,18 @@ const panelTools = new Set();
 const cpuState = { idle: 0, total: 0 };
 const networkState = { rx: 0, tx: 0, time: 0, totalRx: 0, totalTx: 0, samples: [] };
 
-const POWER_ACTIONS = {
+const LINUX_POWER_ACTIONS = {
   lock: ['loginctl', ['lock-session']],
   sleep: ['systemctl', ['suspend']],
   restart: ['systemctl', ['reboot']],
   shutdown: ['systemctl', ['poweroff']],
+};
+
+const WINDOWS_POWER_ACTIONS = {
+  lock: ['rundll32.exe', ['user32.dll,LockWorkStation']],
+  sleep: ['rundll32.exe', ['powrprof.dll,SetSuspendState', '0,1,0']],
+  restart: ['shutdown.exe', ['/r', '/t', '0']],
+  shutdown: ['shutdown.exe', ['/s', '/t', '0']],
 };
 
 console.log('[JARVIS] Starting...');
@@ -209,6 +228,7 @@ function createSettingsWindow() {
 // ── Island panel window ──────────────────────────────────────────────────────
 
 function hidePanelWindow() {
+  panelDesiredOpen = false;
   if (!panelWindow || panelClosing) return;
   panelClosing = true;
   panelWindow.webContents.send('panel-state', { open: false });
@@ -246,7 +266,14 @@ function createPanelWindow() {
 
   panelWindow.loadFile(path.join(__dirname, 'panel.html'));
   panelWindow.on('page-title-updated', (event) => event.preventDefault());
-  panelWindow.on('blur', hidePanelWindow);
+  panelWindow.webContents.on('did-fail-load', (event, code, description) => {
+    console.error(`[JARVIS] Panel page failed to load (${code}): ${description}`);
+  });
+  panelWindow.webContents.on('did-finish-load', () => {
+    if (panelDesiredOpen && panelWindow && !panelWindow.isDestroyed()) {
+      panelWindow.webContents.send('panel-state', { open: true });
+    }
+  });
   panelWindow.on('closed', () => {
     clearTimeout(panelHideTimer);
     panelWindow = null;
@@ -256,24 +283,106 @@ function createPanelWindow() {
 }
 
 function togglePanelWindow() {
-  const panel = createPanelWindow();
-  if (panel.isVisible()) {
-    hidePanelWindow();
-    return;
-  }
+  capsuleConsoleOpen = !capsuleConsoleOpen;
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  setCapsulePeeked(true);
+  overlayWindow.showInactive();
+  overlayWindow.webContents.send('capsule-console-state', { open: capsuleConsoleOpen });
+  resizeOverlayWindow(capsuleConsoleOpen);
+}
 
-  getCachedApplications();
-  clearTimeout(panelHideTimer);
-  panelClosing = false;
-  panel.show();
-  panel.focus();
-  const sendOpen = () => {
-    if (panel && !panel.isDestroyed()) panel.webContents.send('panel-state', { open: true });
-  };
-  if (panel.webContents.isLoading()) {
-    panel.webContents.once('did-finish-load', () => setTimeout(sendOpen, 60));
+function openCapsuleConsole() {
+  capsuleConsoleOpen = true;
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  setCapsulePeeked(true);
+  overlayWindow.showInactive();
+  overlayWindow.webContents.send('capsule-console-state', { open: true });
+  resizeOverlayWindow(true);
+}
+
+function closeCapsuleConsole() {
+  if (!capsuleConsoleOpen || !overlayWindow || overlayWindow.isDestroyed()) return;
+  capsuleConsoleOpen = false;
+  capsuleOutsideSince = 0;
+  overlayWindow.webContents.send('capsule-console-state', { open: false });
+  resizeOverlayWindow(false);
+  setCapsulePeeked(false);
+}
+
+function registerCapsuleOutsideDismissal() {
+  if (process.platform !== 'win32') return;
+  try {
+    const { uIOhook } = require('uiohook-napi');
+    uIOhook.on('mousedown', () => {
+      if (!capsuleConsoleOpen || !overlayWindow || overlayWindow.isDestroyed()) return;
+      const bounds = overlayWindow.getBounds();
+      const point = screen.getCursorScreenPoint();
+      const inside = point.x >= bounds.x && point.x <= bounds.x + bounds.width
+        && point.y >= bounds.y && point.y <= bounds.y + bounds.height;
+      if (!inside) {
+        console.log('[JARVIS] Dismissing island after outside click');
+        closeCapsuleConsole();
+      }
+    });
+  } catch (error) {
+    console.warn('[JARVIS] Outside-click dismissal unavailable:', error.message);
+  }
+}
+
+function setCapsulePeeked(peeked) {
+  if (capsulePeeked === peeked) return;
+  capsulePeeked = peeked;
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('capsule-peek-state', { peeked });
+  }
+}
+
+function resizeOverlayWindow(expanded = capsuleConsoleOpen) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const { width: workAreaWidth } = screen.getPrimaryDisplay().workAreaSize;
+  const width = expanded ? 860 : 290;
+  const height = expanded ? Math.max(190, overlayContentHeight + 2) : 68;
+  overlayWindow.setBounds({
+    x: Math.round((workAreaWidth - width) / 2),
+    y: 0,
+    width,
+    height,
+  }, false);
+  updateOverlayHitTesting();
+}
+
+function updateOverlayHitTesting() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const bounds = overlayWindow.getBounds();
+  const cursor = screen.getCursorScreenPoint();
+  const capsuleWidth = capsuleConsoleOpen ? 840 : 260;
+  const capsuleHeight = capsuleConsoleOpen ? overlayContentHeight : 56;
+  const left = bounds.x + Math.round((bounds.width - capsuleWidth) / 2);
+  const top = bounds.y + 5;
+  const overCapsule = cursor.x >= left && cursor.x <= left + capsuleWidth
+    && cursor.y >= top && cursor.y <= top + capsuleHeight;
+  const overWindow = cursor.x >= bounds.x && cursor.x <= bounds.x + bounds.width
+    && cursor.y >= bounds.y && cursor.y <= bounds.y + bounds.height;
+  if (capsuleConsoleOpen && !overWindow) {
+    if (!capsuleOutsideSince) capsuleOutsideSince = Date.now();
+    if (Date.now() - capsuleOutsideSince >= 450) {
+      capsuleOutsideSince = 0;
+      closeCapsuleConsole();
+      return;
+    }
   } else {
-    sendOpen();
+    capsuleOutsideSince = 0;
+  }
+  const hoverZone = cursor.x >= bounds.x && cursor.x <= bounds.x + bounds.width
+    && cursor.y >= bounds.y && cursor.y <= bounds.y + 12;
+  const canPeek = !capsuleConsoleOpen && overlayVisualState === 'idle';
+  if (canPeek && hoverZone) setCapsulePeeked(true);
+  else if (canPeek && capsulePeeked && !overCapsule) setCapsulePeeked(false);
+  else if (!canPeek) setCapsulePeeked(true);
+  const shouldAcceptInput = capsuleConsoleOpen ? overCapsule : (capsulePeeked && overCapsule);
+  if (overlayPointerInteractive !== shouldAcceptInput) {
+    overlayPointerInteractive = shouldAcceptInput;
+    overlayWindow.setIgnoreMouseEvents(!shouldAcceptInput, { forward: true });
   }
 }
 
@@ -284,9 +393,9 @@ function createOverlayWindow() {
 
   overlayWindow = new BrowserWindow({
     title: 'JARVIS Overlay',
-    width: 520,
-    height: 220,
-    x: Math.round((width - 520) / 2),
+    width: 290,
+    height: 68,
+    x: Math.round((width - 290) / 2),
     y: 0,
     frame: false,
     transparent: true,
@@ -294,9 +403,9 @@ function createOverlayWindow() {
     skipTaskbar: true,
     resizable: false,
     movable: false,
-    focusable: false,
+    focusable: true,
     hasShadow: false,
-    show: false,
+    show: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -307,7 +416,97 @@ function createOverlayWindow() {
   overlayWindow.loadFile(path.join(__dirname, 'overlay.html'));
   overlayWindow.on('page-title-updated', (e) => e.preventDefault());
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  overlayWindow.webContents.on('did-fail-load', (event, code, description) => {
+    console.error(`[JARVIS] Capsule UI failed to load (${code}): ${description}`);
+  });
+  overlayWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const prefix = ['log', 'warn', 'error', 'debug'][level] || 'console';
+    if (level >= 2) console.error(`[capsule:${prefix}] ${message} (${sourceId}:${line})`);
+  });
+  overlayWindow.webContents.on('did-finish-load', () => {
+    overlayWindow.webContents.send('capsule-console-state', { open: capsuleConsoleOpen });
+    overlayWindow.webContents.send('capsule-peek-state', { peeked: capsulePeeked });
+  });
+  overlayHitTestTimer = setInterval(updateOverlayHitTesting, 60);
+  overlayWindow.on('blur', () => {
+    if (capsuleConsoleOpen) closeCapsuleConsole();
+  });
+  overlayWindow.on('closed', () => {
+    if (overlayHitTestTimer) clearInterval(overlayHitTestTimer);
+    overlayHitTestTimer = null;
+    overlayPointerInteractive = false;
+    overlayWindow = null;
+  });
   console.log('[JARVIS] Overlay window created');
+}
+
+async function startScreenCapture() {
+  if (process.platform !== 'win32') throw new Error('Screen selection is currently available on Windows only.');
+  if (captureWindows.length) return;
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayPointerInteractive = false;
+    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    overlayWindow.hide();
+  }
+  const displays = screen.getAllDisplays();
+  const sources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: { width: 2560, height: 1440 },
+    fetchWindowIcons: false,
+  });
+  if (!sources.length) {
+    if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.showInactive();
+    throw new Error('Windows did not provide a screen capture source.');
+  }
+
+  captureWindows = displays.map((display, index) => {
+    const source = sources.find((item) => item.display_id === String(display.id)) || sources[index] || sources[0];
+    const { x, y, width, height } = display.bounds;
+    const window = new BrowserWindow({
+      title: 'JARVIS Screen Capture',
+      x, y, width, height,
+      frame: false,
+      transparent: true,
+      fullscreen: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      movable: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        preload: path.join(__dirname, 'capture-preload.js'),
+      },
+    });
+    window.loadFile(path.join(__dirname, 'capture.html'));
+    window.webContents.once('did-finish-load', () => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('capture-image', {
+          image: source.thumbnail.toDataURL(),
+          screenWidth: source.thumbnail.getSize().width,
+          screenHeight: source.thumbnail.getSize().height,
+        });
+      }
+    });
+    window.on('closed', () => {
+      captureWindows = captureWindows.filter((item) => item !== window);
+    });
+    return window;
+  });
+}
+
+function closeCaptureWindows() {
+  const windows = captureWindows;
+  captureWindows = [];
+  windows.forEach((window) => {
+    if (!window.isDestroyed()) window.close();
+  });
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayPointerInteractive = false;
+    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    overlayWindow.showInactive();
+  }
 }
 
 // ── Hidden recorder window ────────────────────────────────────────────────────
@@ -352,6 +551,11 @@ function showOverlay(state, text) {
   if (!overlayWindow) return;
   clearTimeout(overlayTimer);
   if (state === 'recording' || state === 'thinking' || state === 'done' || state === 'error' || state === 'confirm') {
+    if (overlayVisualState === 'idle') consoleOpenBeforeActivity = capsuleConsoleOpen;
+    overlayVisualState = state;
+    capsuleConsoleOpen = true;
+    setCapsulePeeked(true);
+    resizeOverlayWindow(true);
     const payload = { state, text };
     const pending = state === 'confirm' ? require('./command').currentPendingCommand() : null;
     if (pending) {
@@ -365,8 +569,12 @@ function showOverlay(state, text) {
       overlayTimer = setTimeout(() => showOverlay('hide'), state === 'error' ? 3500 : 1200);
     }
   } else {
+    overlayVisualState = 'idle';
+    capsuleConsoleOpen = consoleOpenBeforeActivity;
+    if (!capsuleConsoleOpen) setCapsulePeeked(false);
+    resizeOverlayWindow(capsuleConsoleOpen);
     overlayWindow.webContents.send('update-state', { state: 'hide' });
-    overlayTimer = setTimeout(() => { if (overlayWindow) overlayWindow.hide(); }, 600);
+    overlayWindow.webContents.send('capsule-console-state', { open: capsuleConsoleOpen });
   }
 }
 
@@ -377,7 +585,123 @@ ipcMain.handle('get-settings', () => {
   return store.store;
 });
 
+ipcMain.handle('overlay-provider-status', () => {
+  const keys = getApiKeys();
+  return [
+    { id: 'claude', label: 'Claude', connected: Boolean(keys.claude), detail: keys.claude ? 'API key saved' : 'Key not set', color: '#f09564' },
+    { id: 'ollama', label: 'Ollama', connected: false, detail: 'Local service status not checked', color: '#a98bff' },
+    { id: 'deepgram', label: 'Deepgram', connected: Boolean(keys.deepgram), detail: keys.deepgram ? 'API key saved' : 'Key not set', color: '#44d39a' },
+    { id: 'openai', label: 'Whisper', connected: Boolean(keys.openai), detail: keys.openai ? 'OpenAI key saved' : 'OpenAI key not set', color: '#ef5e70' },
+  ];
+});
+
 ipcMain.on('close-panel', hidePanelWindow);
+
+ipcMain.on('capsule-console-set', (event, open) => {
+  capsuleConsoleOpen = Boolean(open);
+  resizeOverlayWindow(capsuleConsoleOpen);
+});
+
+ipcMain.on('capsule-content-height', (event, height) => {
+  if (!Number.isFinite(height)) return;
+  overlayContentHeight = Math.max(48, Math.min(380, Math.round(height)));
+  if (capsuleConsoleOpen && overlayWindow && !overlayWindow.isDestroyed()) {
+    const bounds = overlayWindow.getBounds();
+    overlayWindow.setBounds({ ...bounds, height: Math.max(190, overlayContentHeight + 2) }, false);
+  }
+});
+
+ipcMain.on('capture-selection-complete', (event, selection) => {
+  closeCaptureWindows();
+  const width = Number(selection?.width) || 0;
+  const height = Number(selection?.height) || 0;
+  if (width > 1 && height > 1) showOverlay('done', `Region captured · ${Math.round(width)} × ${Math.round(height)}`);
+});
+
+ipcMain.on('capture-selection-cancel', closeCaptureWindows);
+
+ipcMain.handle('overlay-get-tasks', () => {
+  const tasks = store.get('panelTasks', []);
+  return Array.isArray(tasks) ? tasks : [];
+});
+
+ipcMain.handle('overlay-save-tasks', (event, tasks) => {
+  if (!Array.isArray(tasks)) return false;
+  const safeTasks = tasks.slice(0, 50).map((task) => ({
+    text: String(task?.text || '').trim().slice(0, 120),
+    done: task?.done === true,
+  })).filter((task) => task.text);
+  store.set('panelTasks', safeTasks);
+  return true;
+});
+
+ipcMain.handle('overlay-submit-prompt', async (event, text) => {
+  if (typeof text !== 'string' || !text.trim() || text.length > 4000) {
+    throw new Error('Enter a prompt under 4,000 characters.');
+  }
+  const result = await require('./command').processTranscript(text.trim());
+  return {
+    reply: result.result?.reply || result.proposal?.summary || 'Action submitted for confirmation.',
+    status: result.status,
+  };
+});
+
+ipcMain.handle('overlay-start-dictation', async () => {
+  return { ok: await require('./pipeline').startRecording() };
+});
+
+ipcMain.handle('overlay-stop-dictation', async () => {
+  return { ok: await require('./pipeline').stopRecording() };
+});
+
+ipcMain.handle('overlay-open-settings', () => {
+  createSettingsWindow();
+  return true;
+});
+
+ipcMain.handle('overlay-open-sound-settings', async () => {
+  if (process.platform === 'win32') await shell.openExternal('ms-settings:sound');
+  return true;
+});
+
+ipcMain.handle('controls:get-state', () => controlsService.getControls());
+ipcMain.handle('controls:set-volume', (event, value) => controlsService.setVolume(value));
+ipcMain.handle('controls:toggle-mute', () => controlsService.toggleMute());
+ipcMain.handle('controls:set-brightness', (event, value) => controlsService.setBrightness(value));
+ipcMain.handle('controls:set-power-scheme', (event, id) => controlsService.setPowerScheme(id));
+ipcMain.handle('controls:media', (event, action) => controlsService.media(action));
+ipcMain.handle('controls:open-setting', async (event, key) => {
+  const settingsUris = {
+    wifi: 'ms-settings:network-wifi',
+    bluetooth: 'ms-settings:bluetooth',
+    airplane: 'ms-settings:network-airplanemode',
+    hotspot: 'ms-settings:network-mobilehotspot',
+    nearby: 'ms-settings:crossdevice',
+    nightlight: 'ms-settings:nightlight',
+    battery: 'ms-settings:batterysaver',
+    sound: 'ms-settings:sound',
+  };
+  const uri = settingsUris[key];
+  if (!uri || process.platform !== 'win32') return { ok: false, available: false };
+  await shell.openExternal(uri);
+  return { ok: true };
+});
+
+ipcMain.handle('stats:get', () => statsService.getStats());
+
+ipcMain.handle('overlay-open-panel', () => {
+  openCapsuleConsole();
+  return true;
+});
+
+ipcMain.handle('overlay-confirm-command', async () => {
+  await require('./pipeline').confirmCommand();
+  return { message: 'Action completed.' };
+});
+
+ipcMain.handle('overlay-cancel-command', () => ({
+  ok: require('./pipeline').cancelCommand(),
+}));
 
 function runFixedCommand(command, args) {
   return new Promise((resolve) => {
@@ -393,6 +717,7 @@ async function checkPanelTool(command) {
 }
 
 async function initializePanelTools() {
+  if (process.platform === 'win32') return;
   await Promise.all(['wpctl', 'nmcli', 'bluetoothctl', 'playerctl'].map(checkPanelTool));
 }
 
@@ -402,6 +727,15 @@ function parseVolume(text) { const match = text.match(/Volume:\s*([0-9.]+)/); re
 function parseBool(text, key) { const match = text.match(new RegExp(`${key}:\\s*(yes|no)`, 'i')); return match ? match[1].toLowerCase() === 'yes' : false; }
 
 async function getControlsData() {
+  if (process.platform === 'win32') {
+    return {
+      volume: { available: false, value: 0, muted: false },
+      wifi: { available: false, enabled: false, ssid: '' },
+      bluetooth: { available: false, enabled: false },
+      audio: { available: false, name: '' },
+      media: { available: false, playing: false, title: '', artist: '', position: 0, length: 0 },
+    };
+  }
   const result = { volume: { available: commandAvailable('wpctl'), value: 0, muted: false }, wifi: { available: commandAvailable('nmcli'), enabled: false, ssid: '' }, bluetooth: { available: commandAvailable('bluetoothctl'), enabled: false }, audio: { available: commandAvailable('wpctl'), name: '' }, media: { available: commandAvailable('playerctl'), playing: false, title: '', artist: '', position: 0, length: 0 } };
   if (result.volume.available) { const volume = await runFixedCommand('wpctl', ['get-volume', '@DEFAULT_AUDIO_SINK@']); result.volume.value = parseVolume(volume.stdout); result.volume.muted = /\[MUTED\]/i.test(volume.stdout); const sink = await runFixedCommand('wpctl', ['inspect', '@DEFAULT_AUDIO_SINK@']); const match = sink.stdout.match(/node.description\s*=\s*"([^"]+)/); result.audio.name = match ? match[1] : ''; }
   if (result.wifi.available) { const radio = await runFixedCommand('nmcli', ['radio', 'wifi']); result.wifi.enabled = radio.stdout.trim() === 'enabled'; const ssid = await runFixedCommand('nmcli', ['-t', '-f', 'ACTIVE,SSID', 'dev', 'wifi']); const line = ssid.stdout.split(/\r?\n/).find((item) => item.startsWith('yes:')); result.wifi.ssid = line ? line.slice(4) : ''; }
@@ -415,9 +749,37 @@ function readNetwork() { let rx = 0; let tx = 0; for (const line of readText('/p
 function findCpuTemp() { try { for (const hwmon of fs.readdirSync('/sys/class/hwmon')) { const base = path.join('/sys/class/hwmon', hwmon); if (!/k10temp|coretemp/i.test(readText(path.join(base, 'name')))) continue; const input = fs.readdirSync(base).find((file) => /^temp\d+_input$/.test(file)); if (input) return Number(readText(path.join(base, input)).trim()) / 1000; } } catch (_) {} return null; }
 function findGpuTemp(base) { try { const hwmonPath = path.join(base, 'hwmon'); for (const hwmon of fs.readdirSync(hwmonPath)) { const value = readText(path.join(hwmonPath, hwmon, 'temp1_input')).trim(); const temp = Number(value); if (value && Number.isFinite(temp)) return temp / 1000; } } catch (_) {} return null; }
 async function readGpu() { const drm = '/sys/class/drm'; try { for (const card of fs.readdirSync(drm).filter((name) => /^card\d+$/.test(name))) { const base = path.join(drm, card, 'device'); const busy = Number(readText(path.join(base, 'gpu_busy_percent')).trim()); if (Number.isFinite(busy)) return { available: true, usage: busy, model: 'AMD GPU', temp: findGpuTemp(base) }; } } catch (_) {} try { const output = await runFixedCommand('nvidia-smi', ['--query-gpu=utilization.gpu,temperature.gpu,name', '--format=csv,noheader,nounits']); if (output.code === 0) { const [usage, temp, ...name] = output.stdout.trim().split(',').map((part) => part.trim()); return { available: true, usage: Number(usage) || 0, temp: Number(temp) || null, model: name.join(', ') || 'NVIDIA GPU' }; } } catch (_) {} return { available: false }; }
-async function getStatsData() { const mem = readText('/proc/meminfo'); const total = Number((mem.match(/^MemTotal:\s+(\d+)/m) || [0, 0])[1]) * 1024; const available = Number((mem.match(/^MemAvailable:\s+(\d+)/m) || [0, 0])[1]) * 1024; let storage = { available: false }; try { const stat = fs.statfsSync('/'); storage = { available: true, used: stat.blocks * stat.bsize - stat.bavail * stat.bsize, total: stat.blocks * stat.bsize }; } catch (_) {} let battery = { available: false }; try { const batteryPath = fs.readdirSync('/sys/class/power_supply', { withFileTypes: true }).find((entry) => entry.name.startsWith('BAT')); if (batteryPath) { const base = path.join('/sys/class/power_supply', batteryPath.name); const capacity = Number(readText(path.join(base, 'capacity')).trim()); battery = { available: Number.isFinite(capacity), capacity, status: readText(path.join(base, 'status')).trim() }; } } catch (_) {} return { cpu: { ...readCpu(), model: (readText('/proc/cpuinfo').match(/^model name\s*:\s*(.+)$/m) || [0, 'CPU'])[1], temp: findCpuTemp() }, memory: { available: total > 0, used: total - available, total }, storage, network: readNetwork(), battery, gpu: await readGpu() }; }
+async function getStatsData() {
+  if (process.platform === 'win32') return statsService.getStats();
+  const mem = readText('/proc/meminfo'); const total = Number((mem.match(/^MemTotal:\s+(\d+)/m) || [0, 0])[1]) * 1024; const available = Number((mem.match(/^MemAvailable:\s+(\d+)/m) || [0, 0])[1]) * 1024; let storage = { available: false }; try { const stat = fs.statfsSync('/'); storage = { available: true, used: stat.blocks * stat.bsize - stat.bavail * stat.bsize, total: stat.blocks * stat.bsize }; } catch (_) {} let battery = { available: false }; try { const batteryPath = fs.readdirSync('/sys/class/power_supply', { withFileTypes: true }).find((entry) => entry.name.startsWith('BAT')); if (batteryPath) { const base = path.join('/sys/class/power_supply', batteryPath.name); const capacity = Number(readText(path.join(base, 'capacity')).trim()); battery = { available: Number.isFinite(capacity), capacity, status: readText(path.join(base, 'status')).trim() }; } } catch (_) {} return { cpu: { ...readCpu(), model: (readText('/proc/cpuinfo').match(/^model name\s*:\s*(.+)$/m) || [0, 'CPU'])[1], temp: findCpuTemp() }, memory: { available: total > 0, used: total - available, total }, storage, network: readNetwork(), battery, gpu: await readGpu() };
+}
 
 function scanApplications() {
+  if (process.platform === 'win32') {
+    const startMenuRoots = [
+      path.join(process.env.ProgramData || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+      path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+    ];
+    const applications = [];
+    const seen = new Set();
+    const visit = (directory, depth = 0) => {
+      if (depth > 5) return;
+      let entries;
+      try { entries = fs.readdirSync(directory, { withFileTypes: true }); } catch (_) { return; }
+      for (const entry of entries) {
+        const fullPath = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          visit(fullPath, depth + 1);
+        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.lnk') && !seen.has(fullPath.toLowerCase())) {
+          seen.add(fullPath.toLowerCase());
+          applications.push({ id: fullPath, name: path.basename(entry.name, path.extname(entry.name)), icon: '' });
+        }
+      }
+    };
+    startMenuRoots.forEach((root) => visit(root));
+    return applications.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   const directories = [
     '/usr/share/applications',
     path.join(os.homedir(), '.local/share/applications'),
@@ -459,6 +821,13 @@ ipcMain.handle('get-apps', () => getCachedApplications().map(({ id, name, icon }
 ipcMain.handle('launch-app', (event, id) => {
   const application = getCachedApplications().find((item) => item.id === id);
   if (!application) return { ok: false, error: 'Unknown application' };
+  if (process.platform === 'win32') {
+    execFile('explorer.exe', [application.id], { shell: false, detached: true, stdio: 'ignore' }, (error) => {
+      if (error) console.error(`[JARVIS] app launch failed code=${typeof error.code === 'number' ? error.code : 1}`);
+    });
+    hidePanelWindow();
+    return { ok: true };
+  }
   const desktopId = application.id.endsWith('.desktop') ? application.id.slice(0, -8) : application.id;
   execFile('gtk-launch', [desktopId], { shell: false, detached: true, stdio: 'ignore' }, (error) => {
     if (error) console.error(`[JARVIS] app launch failed code=${typeof error.code === 'number' ? error.code : 1}`);
@@ -468,13 +837,14 @@ ipcMain.handle('launch-app', (event, id) => {
 });
 
 ipcMain.handle('power-action', async (event, id) => {
-  if (powerActionRunning || !Object.prototype.hasOwnProperty.call(POWER_ACTIONS, id)) return { ok: false };
+  const powerActions = process.platform === 'win32' ? WINDOWS_POWER_ACTIONS : LINUX_POWER_ACTIONS;
+  if (powerActionRunning || !Object.prototype.hasOwnProperty.call(powerActions, id)) return { ok: false };
   powerActionRunning = true;
-  const [commandName, args] = POWER_ACTIONS[id];
+  const [commandName, args] = powerActions[id];
   const result = await runFixedCommand(commandName, args);
   powerActionRunning = false;
   if (result.code !== 0) console.error(`[JARVIS] power action ${id} failed code=${result.code}`);
-  if (result.code === 0 && (id === 'lock' || id === 'sleep')) hidePanelWindow();
+  if (result.code === 0 && (id === 'lock' || id === 'sleep' || id === 'restart' || id === 'shutdown')) hidePanelWindow();
   return { ok: result.code === 0 };
 });
 
@@ -572,7 +942,8 @@ app.whenReady().then(async () => {
 
   // trigger.js: starts uiohook on Windows, handles argv on Linux.
   // Pass window creators so argv flags can open their matching surfaces.
-  trigger.init(store, createSettingsWindow, togglePanelWindow);
+  trigger.init(store, createSettingsWindow, togglePanelWindow, startScreenCapture);
+  registerCapsuleOutsideDismissal();
 });
 
 app.on('window-all-closed', () => {

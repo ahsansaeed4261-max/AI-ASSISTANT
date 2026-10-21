@@ -33,6 +33,8 @@ let _commandRecording = false;
 let _recorderReady = false;
 let _openSettings = null;  // set by init(), called on --settings
 let _togglePanel = null;   // set by init(), called on --panel-toggle
+let _openCapture = null;   // set by init(), called by Ctrl+Shift capture hotkey
+let _lastPanelToggleAt = 0;
 
 function isRecording() { return _recording; }
 
@@ -115,6 +117,12 @@ async function handleArgv(argv) {
 
   // ── --panel-toggle ───────────────────────────────────────────────────────
   if (argv.includes('--panel-toggle')) {
+    const now = Date.now();
+    if (now - _lastPanelToggleAt < 750) {
+      console.log('[trigger] ignoring duplicate --panel-toggle');
+      return;
+    }
+    _lastPanelToggleAt = now;
     if (typeof _togglePanel === 'function') {
       _togglePanel();
     } else {
@@ -150,9 +158,8 @@ async function handleArgv(argv) {
 
 async function doStart() {
   try {
-    await getPipeline().startRecording();
-    _recording = true;
-    console.log('[trigger] recording started');
+    _recording = await getPipeline().startRecording();
+    console.log(_recording ? '[trigger] recording started' : '[trigger] recording not started');
   } catch (err) {
     console.error('[trigger] startRecording error:', err);
   }
@@ -180,6 +187,7 @@ function startWindowsHotkey(store) {
 
   const held = new Set();
   let hotkeyActive = false;
+  let captureHotkeyActive = false;
 
   function classifyKey(keycode) {
     for (const [name, codes] of Object.entries(KEY_MAP)) {
@@ -189,6 +197,7 @@ function startWindowsHotkey(store) {
   }
 
   function isHotkeyPressed() {
+    if (held.has('ctrl') && held.has('shift')) return false;
     const hk = store.get('hotkey');
     if (hk.ctrl  && !held.has('ctrl'))  return false;
     if (hk.shift && !held.has('shift')) return false;
@@ -201,6 +210,13 @@ function startWindowsHotkey(store) {
     const mod = classifyKey(e.keycode);
     if (mod) held.add(mod);
 
+    if (!captureHotkeyActive && held.has('ctrl') && held.has('shift')) {
+      captureHotkeyActive = true;
+      if (typeof _openCapture === 'function') {
+        Promise.resolve(_openCapture()).catch((err) => console.error('[trigger] screen capture failed:', err.message));
+      }
+    }
+
     if (!hotkeyActive && isHotkeyPressed()) {
       hotkeyActive = true;
       doStart().catch((err) => console.error('[trigger] doStart error:', err));
@@ -210,6 +226,8 @@ function startWindowsHotkey(store) {
   uIOhook.on('keyup', (e) => {
     const mod = classifyKey(e.keycode);
     if (mod) held.delete(mod);
+
+    if (!held.has('ctrl') || !held.has('shift')) captureHotkeyActive = false;
 
     if (hotkeyActive && !isHotkeyPressed()) {
       hotkeyActive = false;
@@ -231,16 +249,21 @@ function startWindowsHotkey(store) {
  * @param {Store}    store        electron-store instance
  * @param {Function} openSettings callback that opens the settings window
  * @param {Function} togglePanel  callback that toggles the island panel
+ * @param {Function} openCapture  callback that opens the screen-region selector
  */
-function init(store, openSettings, togglePanel) {
+function init(store, openSettings, togglePanel, openCapture) {
   _openSettings = openSettings || null;
   _togglePanel = togglePanel || null;
+  _openCapture = openCapture || null;
 
   if (IS_LINUX) {
     console.log('[trigger] Linux mode – use `electron . --start/--stop/--toggle/--settings`');
     setImmediate(() => handleArgv(process.argv));
   } else {
     startWindowsHotkey(store);
+    // Also honor flags on the first Windows launch; second-instance flags are
+    // handled by main.js when JARVIS is already running.
+    setImmediate(() => handleArgv(process.argv));
   }
 }
 

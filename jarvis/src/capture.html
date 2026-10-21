@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <title>Select a screen region</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;cursor:crosshair;font-family:"Segoe UI Variable","Segoe UI",sans-serif;color:#fff;user-select:none}
+    .screen,.bright-screen,.shade,.selection{position:absolute;inset:0;width:100%;height:100%}.screen,.bright-screen{object-fit:fill}.screen{filter:brightness(.48)}.bright-screen{clip-path:inset(100% 100% 0 0)}.shade{background:rgba(0,0,0,.35);pointer-events:none}.selection{display:none;border:1px solid #fff;box-shadow:0 0 0 1px #0008,0 8px 28px #0008;pointer-events:none}.selection.active{display:block}
+    .instructions{position:absolute;top:28px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:10px 15px;border:1px solid #ffffff2c;border-radius:999px;background:#111c;color:#f4f5f7;font-size:13px;box-shadow:0 8px 30px #0008;pointer-events:none}.instructions strong{font-weight:600}.key{padding:2px 6px;border:1px solid #ffffff30;border-radius:5px;color:#d5d7dc;font-size:11px}
+    .measure{position:absolute;display:none;padding:5px 8px;border-radius:6px;background:#101114;color:#f6f7f8;font-size:11px;box-shadow:0 3px 12px #0007;pointer-events:none}.measure.visible{display:block}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <img class="screen" id="screenImage" alt="Captured screen" />
+  <div class="shade"></div>
+  <img class="bright-screen" id="brightImage" alt="" />
+  <div class="selection" id="selection"></div>
+  <div class="instructions"><strong>Select an area to ask about</strong><span class="key">Esc</span><span>to cancel</span></div>
+  <div class="measure" id="measure"></div>
+  <script>
+    const screenImage=document.getElementById('screenImage');const brightImage=document.getElementById('brightImage');const selection=document.getElementById('selection');const measure=document.getElementById('measure');let screenshotSize={width:0,height:0};let start=null;
+    window.captureAPI.onImage(({image,screenWidth,screenHeight})=>{screenImage.src=image;brightImage.src=image;screenshotSize={width:screenWidth,height:screenHeight};});
+    function drawBox(x,y,w,h){selection.classList.add('active');selection.style.left=`${x}px`;selection.style.top=`${y}px`;selection.style.width=`${w}px`;selection.style.height=`${h}px`;const right=Math.max(0,innerWidth-x-w);const bottom=Math.max(0,innerHeight-y-h);brightImage.style.clipPath=`inset(${y}px ${right}px ${bottom}px ${x}px)`;measure.textContent=`${Math.round(w)} × ${Math.round(h)}`;measure.style.left=`${Math.min(x,innerWidth-100)}px`;measure.style.top=`${Math.max(4,y-30)}px`;measure.classList.add('visible');}
+    document.addEventListener('pointerdown',(event)=>{if(event.button!==0)return;start={x:event.clientX,y:event.clientY};document.body.setPointerCapture?.(event.pointerId);});
+    document.addEventListener('pointermove',(event)=>{if(!start)return;const x=Math.min(start.x,event.clientX);const y=Math.min(start.y,event.clientY);const w=Math.abs(event.clientX-start.x);const h=Math.abs(event.clientY-start.y);drawBox(x,y,w,h);});
+    document.addEventListener('pointerup',(event)=>{if(!start)return;const rect={x:Math.min(start.x,event.clientX),y:Math.min(start.y,event.clientY),width:Math.abs(event.clientX-start.x),height:Math.abs(event.clientY-start.y)};start=null;if(rect.width<5||rect.height<5){selection.classList.remove('active');measure.classList.remove('visible');return;}const scaleX=screenshotSize.width/innerWidth;const scaleY=screenshotSize.height/innerHeight;const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(rect.width*scaleX));canvas.height=Math.max(1,Math.round(rect.height*scaleY));const context=canvas.getContext('2d');context.drawImage(screenImage,Math.round(rect.x*scaleX),Math.round(rect.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);window.captureAPI.completeSelection({width:canvas.width,height:canvas.height,image:canvas.toDataURL('image/png')});});
+    window.addEventListener('keydown',(event)=>{if(event.key==='Escape'){event.preventDefault();window.captureAPI.cancel();}});
+  </script>
+</body>
+</html>

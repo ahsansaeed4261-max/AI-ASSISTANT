@@ -68,6 +68,10 @@ Paste into active window → Restore previous clipboard
 
 ### Windows
 - Paste simulation uses PowerShell's `SendKeys` – works reliably without extra dependencies
+- The panel currently supports Windows Start Menu app discovery/launch, CPU and memory stats, system-drive usage, and native lock/sleep/restart/shutdown actions.
+- GPU and network-traffic stats remain unavailable on Windows rather than reporting Linux-only or placeholder data.
+- The island Controls page now reads Wi-Fi connection, Bluetooth device presence, battery, built-in display brightness, default output volume/mute, and power plans. Brightness, volume/mute, power-plan changes, and media transport keys are implemented; radio/hotspot/night-light/nearby-sharing controls open their corresponding Windows Settings pages. Windows does not yet provide the island with current media-session metadata.
+- The island Stats page reads per-core CPU usage, RAM, system-drive use, network adapter throughput, battery state, and detected graphics adapters. Per-adapter GPU Engine counters are mapped through DXGI LUIDs; NVIDIA telemetry is enriched from `nvidia-smi`. CPU temperature and pagefile usage are not exposed yet. Live polling runs only while Stats is visible; GPU and battery queries are cached.
 
 ### Linux (if running on Linux via Wine or native Electron)
 - Requires `xdotool` or `xte` for paste simulation:
