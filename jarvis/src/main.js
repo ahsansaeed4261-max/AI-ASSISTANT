@@ -119,6 +119,9 @@ let tray = null;
 let settingsWindow = null;
 let overlayWindow = null;
 let recorderWindow = null;
+let panelWindow = null;
+let panelHideTimer = null;
+let panelClosing = false;
 
 console.log('[JARVIS] Starting...');
 
@@ -182,6 +185,69 @@ function createSettingsWindow() {
   settingsWindow.setMenu(null);
   settingsWindow.on('closed', () => { settingsWindow = null; });
   console.log('[JARVIS] Settings window created');
+}
+
+// ── Island panel window ──────────────────────────────────────────────────────
+
+function hidePanelWindow() {
+  if (!panelWindow || panelClosing) return;
+  panelClosing = true;
+  panelWindow.webContents.send('panel-state', { open: false });
+  clearTimeout(panelHideTimer);
+  panelHideTimer = setTimeout(() => {
+    if (panelWindow && !panelWindow.isDestroyed()) panelWindow.hide();
+    panelClosing = false;
+  }, 300);
+}
+
+function createPanelWindow() {
+  if (panelWindow) return panelWindow;
+
+  const { width } = screen.getPrimaryDisplay().workAreaSize;
+  panelWindow = new BrowserWindow({
+    title: 'JARVIS Panel',
+    width: 820,
+    height: 460,
+    x: Math.round((width - 820) / 2),
+    y: 0,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    skipTaskbar: true,
+    show: false,
+    resizable: false,
+    focusable: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'panel-preload.js'),
+    },
+  });
+
+  panelWindow.loadFile(path.join(__dirname, 'panel.html'));
+  panelWindow.on('page-title-updated', (event) => event.preventDefault());
+  panelWindow.on('blur', hidePanelWindow);
+  panelWindow.on('closed', () => {
+    clearTimeout(panelHideTimer);
+    panelWindow = null;
+    panelClosing = false;
+  });
+  return panelWindow;
+}
+
+function togglePanelWindow() {
+  const panel = createPanelWindow();
+  if (panel.isVisible()) {
+    hidePanelWindow();
+    return;
+  }
+
+  clearTimeout(panelHideTimer);
+  panelClosing = false;
+  panel.show();
+  panel.focus();
+  panel.webContents.send('panel-state', { open: true });
 }
 
 // ── Overlay window ────────────────────────────────────────────────────────────
@@ -284,6 +350,8 @@ ipcMain.handle('get-settings', () => {
   return store.store;
 });
 
+ipcMain.on('close-panel', hidePanelWindow);
+
 ipcMain.handle('get-mic-device-id', () => store.get('micDeviceId') || '');
 
 ipcMain.handle('get-history', () => {
@@ -347,8 +415,8 @@ app.whenReady().then(() => {
   require('./pipeline');
 
   // trigger.js: starts uiohook on Windows, handles argv on Linux.
-  // Pass createSettingsWindow so --settings can open it from any instance.
-  trigger.init(store, createSettingsWindow);
+  // Pass window creators so argv flags can open their matching surfaces.
+  trigger.init(store, createSettingsWindow, togglePanelWindow);
 });
 
 app.on('window-all-closed', () => {

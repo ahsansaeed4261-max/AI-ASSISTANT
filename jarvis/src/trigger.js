@@ -29,6 +29,7 @@ function getPipeline() {
 let _recording = false;
 let _commandRecording = false;
 let _openSettings = null;  // set by init(), called on --settings
+let _togglePanel = null;   // set by init(), called on --panel-toggle
 
 function isRecording() { return _recording; }
 
@@ -84,6 +85,16 @@ async function handleArgv(argv) {
         console.error('[trigger] command start error:', err.message);
         _commandRecording = false;
       });
+    }
+    return;
+  }
+
+  // ── --panel-toggle ───────────────────────────────────────────────────────
+  if (argv.includes('--panel-toggle')) {
+    if (typeof _togglePanel === 'function') {
+      _togglePanel();
+    } else {
+      console.warn('[trigger] --panel-toggle: panel callback not registered yet');
     }
     return;
   }
@@ -192,9 +203,11 @@ function startWindowsHotkey(store) {
  *
  * @param {Store}    store        electron-store instance
  * @param {Function} openSettings callback that opens the settings window
+ * @param {Function} togglePanel  callback that toggles the island panel
  */
-function init(store, openSettings) {
+function init(store, openSettings, togglePanel) {
   _openSettings = openSettings || null;
+  _togglePanel = togglePanel || null;
 
   if (IS_LINUX) {
     console.log('[trigger] Linux mode – use `electron . --start/--stop/--toggle/--settings`');
