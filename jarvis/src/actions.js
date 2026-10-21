@@ -1,6 +1,6 @@
 /**
  * actions.js
- * Registry of runnable actions for --action '{"name":"...","params":{...}}'.
+ * Registry of runnable actions for --action '{"action":"open_app","app":"firefox"}'.
  *
  * Each action has:
  *   name        {string}   machine-readable identifier
@@ -14,8 +14,7 @@
 
 'use strict';
 
-const { execFileSync, execFile } = require('child_process');
-const { spawnSync }               = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const IS_LINUX = process.platform === 'linux';
 
@@ -23,6 +22,15 @@ const IS_LINUX = process.platform === 'linux';
 
 function run(cmd, args = [], opts = {}) {
   return spawnSync(cmd, args, { encoding: 'utf8', timeout: 8000, ...opts });
+}
+
+function spawnDetached(command, args = []) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+    child.once('error', reject);
+    child.once('spawn', resolve);
+    child.unref();
+  });
 }
 
 function requireTool(name) {
@@ -44,21 +52,19 @@ const ACTIONS = [
     risk: 'safe',
     description: 'Launch an application by its executable name or .desktop name.',
     params: {
-      app: { type: 'string', description: 'Executable name or .desktop app ID (e.g. "firefox", "org.gnome.Nautilus")', required: true },
+      app:  { type: 'string', description: 'Executable name or .desktop app ID (e.g. "firefox", "org.gnome.Nautilus")', required: false },
+      name: { type: 'string', description: 'Alias for app', required: false },
     },
-    async run({ app: appName }) {
+    async run({ app, name }) {
+      const appName = app || name;
       if (!appName) throw new Error('app param is required');
 
       // Try gtk-launch (handles .desktop IDs), fall back to direct exec
       const gtk = run('gtk-launch', [appName]);
       if (gtk.status === 0) return { launched: appName, method: 'gtk-launch' };
 
-      const direct = spawnSync(appName, [], {
-        detached: true,
-        stdio:    'ignore',
-        timeout:  3000,
-      });
-      if (direct.error) throw new Error(`Cannot launch '${appName}': ${direct.error.message}`);
+      if (!/^[a-zA-Z0-9._-]+$/.test(appName)) throw new Error('Unknown app');
+      await spawnDetached(appName);
       return { launched: appName, method: 'exec' };
     },
   },
@@ -75,11 +81,12 @@ const ACTIONS = [
       if (!url) throw new Error('url param is required');
       if (!/^https?:\/\//i.test(url)) throw new Error(`URL must start with http:// or https://. Got: ${url}`);
 
-      const opener = IS_LINUX ? 'xdg-open' : 'start';
-      const r = IS_LINUX
-        ? run('xdg-open', [url])
-        : run('cmd', ['/c', 'start', '', url]);
-      if (r.error) throw new Error(`xdg-open failed: ${r.error.message}`);
+      if (IS_LINUX) {
+        await spawnDetached('xdg-open', [url]);
+      } else {
+        const r = run('cmd', ['/c', 'start', '', url]);
+        if (r.error) throw new Error(`xdg-open failed: ${r.error.message}`);
+      }
       return { opened: url };
     },
   },
@@ -104,9 +111,27 @@ const ACTIONS = [
       const base = engines[engine] ?? engines.google;
       const url  = base + encodeURIComponent(query);
 
-      const r = IS_LINUX ? run('xdg-open', [url]) : run('cmd', ['/c', 'start', '', url]);
-      if (r.error) throw new Error(`Could not open browser: ${r.error.message}`);
+      if (IS_LINUX) {
+        await spawnDetached('xdg-open', [url]);
+      } else {
+        const r = run('cmd', ['/c', 'start', '', url]);
+        if (r.error) throw new Error(`Could not open browser: ${r.error.message}`);
+      }
       return { searched: query, engine, url };
+    },
+  },
+
+  // ── reply ─────────────────────────────────────────────────────────────────
+  {
+    name: 'reply',
+    risk: 'safe',
+    description: 'Return text as a reply without performing an external action.',
+    params: {
+      text: { type: 'string', description: 'Reply text', required: true },
+    },
+    async run({ text }) {
+      if (typeof text !== 'string') throw new Error('text param is required');
+      return { reply: text };
     },
   },
 
@@ -241,7 +266,7 @@ async function runAction(jsonStr) {
   } else {
     params = Object.assign({}, payload);
     delete params.action;
-    delete params.name;
+    if (!payload.action) delete params.name;
   }
 
   console.log(`[actions] running '${actionName}'`);

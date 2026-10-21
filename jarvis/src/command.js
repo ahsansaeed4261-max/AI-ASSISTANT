@@ -1,20 +1,24 @@
 /**
  * command.js
- * Interprets a transcribed voice command with Claude and manages an in-memory
- * pending command. Only locally validated actions can reach the action runner.
+ * Interprets a transcribed voice command with Ollama (or Claude as fallback)
+ * and manages an in-memory pending command. Only locally validated actions can
+ * reach the action runner.
  */
 
 'use strict';
 
 const crypto = require('crypto');
+const http = require('http');
 const https = require('https');
 const { getApiKeys, showOverlay } = require('./main');
 const { getRisk, listActions, registry, runAction } = require('./actions');
 const notify = require('./notify');
 
 const TIMEOUT_MS = 30_000;
+const OLLAMA_TIMEOUT_MS = 60_000;
 const PENDING_TTL_MS = 30_000;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-5-5';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 
 let pendingCommand = null;
 
@@ -126,32 +130,147 @@ function validateProposal(replyText) {
   };
 }
 
-async function interpret(transcript) {
-  const claudeKey = getApiKeys().claude;
-  if (!claudeKey) throw commandError('Claude API key is required for command mode');
+function buildProposalSchema(actions) {
+  const properties = {};
+  for (const action of actions) {
+    for (const [name, spec] of Object.entries(action.params || {})) {
+      const types = properties[name]?.type;
+      const typeList = Array.isArray(types) ? types : types ? [types] : [];
+      if (!typeList.includes(spec.type)) typeList.push(spec.type);
+      properties[name] = { type: typeList.length === 1 ? typeList[0] : typeList };
+    }
+  }
 
-  const actions = listActions();
-  const system = [
-    'Convert the voice transcript into exactly one allowed action.',
-    'Return JSON only, with no Markdown or code fences.',
-    'The JSON object must be exactly: {"action": string, "params": object, "summary": string}.',
-    'Choose an action only from this registry and use only its declared parameters.',
-    'Do not include risk, confirmation, shell commands, explanations, or extra fields.',
-    `Allowed actions: ${JSON.stringify(actions)}`,
-  ].join('\n');
-  const body = JSON.stringify({
-    model: CLAUDE_MODEL,
-    max_tokens: 512,
-    temperature: 0,
-    system,
-    messages: [{ role: 'user', content: transcript }],
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['action', 'params', 'summary'],
+    properties: {
+      action: { type: 'string', enum: actions.map((action) => action.name) },
+      params: { type: 'object', properties },
+      summary: { type: 'string' },
+    },
+  };
+}
+
+function buildSystemPrompt(actions) {
+  const actionList = actions.map((action) => {
+    const params = Object.entries(action.params || {})
+      .map(([name, spec]) => `${name}: ${spec.description}`)
+      .join('; ') || 'none';
+    return `- ${action.name}: ${action.description} Parameters: ${params}`;
   });
 
-  console.log(`[command] requesting Claude proposal with model ${CLAUDE_MODEL}`);
-  const raw = await claudeRequest(body, claudeKey);
-  const response = JSON.parse(raw);
-  if (response.error) throw commandError('Claude rejected the command request');
-  return validateProposal(response?.content?.[0]?.text);
+  return [
+    'Convert the voice transcript into exactly one allowed action.',
+    'Use this exact shape: {"action": NAME, "params": {...}, "summary": "short sentence"}.',
+    'Choose an action only from the registry and use only its declared parameters.',
+    'Do not include risk, confirmation, shell commands, explanations, or extra fields.',
+    'Actions:',
+    ...actionList,
+    'Examples:',
+    '"open spotify" -> {"action":"open_app","params":{"app":"spotify"},"summary":"Open Spotify"}',
+    '"search google for linux wallpapers" -> {"action":"web_search","params":{"query":"linux wallpapers"},"summary":"Search for linux wallpapers"}',
+    '"turn the volume up" -> {"action":"media_control","params":{"command":"volume_up"},"summary":"Volume up"}',
+    '"what is two plus two" -> {"action":"reply","params":{"text":"Four"},"summary":"Answer"}',
+    '"open https://example.com" -> {"action":"open_url","params":{"url":"https://example.com"},"summary":"Open example.com"}',
+    'Reply with the JSON object only.',
+  ].join('\n');
+}
+
+function ollamaRequest(body) {
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      hostname: '127.0.0.1',
+      port: 11434,
+      path: '/api/chat',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (response) => {
+      let data = '';
+      response.on('data', (chunk) => { data += chunk; });
+      response.on('end', () => {
+        clearTimeout(timer);
+        if (response.statusCode !== 200) {
+          reject(commandError(`Ollama HTTP ${response.statusCode}: ${data}`));
+          return;
+        }
+        resolve(data);
+      });
+    });
+
+    const timer = setTimeout(() => {
+      request.destroy(commandError('Ollama command request timed out'));
+    }, OLLAMA_TIMEOUT_MS);
+
+    request.on('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    request.write(body);
+    request.end();
+  });
+}
+
+function ollamaFailureMessage(error) {
+  const message = error?.message || String(error);
+  if (error?.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(message)) {
+    return 'Ollama is not running. Start it with: ollama serve';
+  }
+  if (/model.*not found|not found.*model/i.test(message)) {
+    return `Model not found. Run: ollama pull ${OLLAMA_MODEL}`;
+  }
+  return `Ollama command request failed: ${message}`;
+}
+
+async function interpret(transcript) {
+  const actions = listActions();
+  const system = buildSystemPrompt(actions);
+  const body = JSON.stringify({
+    model: OLLAMA_MODEL,
+    stream: false,
+    keep_alive: '10m',
+    options: { temperature: 0 },
+    format: buildProposalSchema(actions),
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: transcript },
+    ],
+  });
+
+  let replyText;
+  try {
+    console.log(`[command] requesting Ollama proposal with model ${OLLAMA_MODEL}`);
+    const raw = await ollamaRequest(body);
+    const response = JSON.parse(raw);
+    if (response.error) throw commandError(`Ollama rejected the command request: ${response.error}`);
+    replyText = response?.message?.content;
+  } catch (ollamaError) {
+    const claudeKey = getApiKeys().claude;
+    if (!claudeKey) throw commandError(ollamaFailureMessage(ollamaError));
+
+    console.warn(`[command] Ollama unavailable; falling back to Claude: ${ollamaFailureMessage(ollamaError)}`);
+    const claudeBody = JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 512,
+      temperature: 0,
+      system,
+      messages: [{ role: 'user', content: transcript }],
+    });
+    try {
+      const raw = await claudeRequest(claudeBody, claudeKey);
+      const response = JSON.parse(raw);
+      if (response.error) throw commandError('Claude rejected the command request');
+      replyText = response?.content?.[0]?.text;
+    } catch (claudeError) {
+      throw commandError(`${ollamaFailureMessage(ollamaError)} Claude fallback failed: ${claudeError.message}`);
+    }
+  }
+
+  return validateProposal(replyText);
 }
 
 function clearPendingCommand() {
@@ -172,6 +291,12 @@ async function execute(command) {
 
 async function processTranscript(transcript) {
   const proposal = await interpret(transcript);
+  if (proposal.action === 'reply') {
+    const text = proposal.params.text;
+    showOverlay('done', text);
+    notify('JARVIS', text);
+    return { status: 'executed', proposal, result: { reply: text } };
+  }
   if (proposal.risk === 'safe') {
     showOverlay('thinking', 'Running command...');
     const result = await execute(proposal);

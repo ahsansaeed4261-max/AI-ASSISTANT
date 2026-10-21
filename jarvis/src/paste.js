@@ -67,6 +67,11 @@ async function pasteLinux(text) {
     return;
   }
 
+  const previousResult = spawnSync('wl-paste', ['--no-newline'], { timeout: 1000 });
+  const previous = previousResult.status === 0 && previousResult.stdout?.length
+    ? previousResult.stdout.toString()
+    : null;
+
   try {
     await setClipboard(text);
     console.log('[paste] wl-copy: clipboard set');
@@ -91,6 +96,16 @@ async function pasteLinux(text) {
     console.error('[paste] wtype exited with code', wt.status, wt.stderr ? wt.stderr.toString().trim() : '');
   } else {
     console.log('[paste] sent paste shortcut');
+  }
+
+  await sleep(400);
+  if (previous !== null) {
+    try {
+      await setClipboard(previous);
+      console.log('[paste] wl-copy: clipboard restored');
+    } catch (e) {
+      console.error('[paste] wl-copy restore failed:', e.message);
+    }
   }
 }
 

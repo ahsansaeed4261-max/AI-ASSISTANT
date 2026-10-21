@@ -292,6 +292,12 @@
 
   <div class="divider"></div>
 
+  <label class="hotkey-chip">
+    <input type="checkbox" id="saveHistory" /> Save dictation history
+  </label>
+
+  <div class="divider"></div>
+
   <div class="history-header">
     <div class="section-label" style="margin-bottom:0">History</div>
     <button type="button" class="history-clear" id="clearHistory">Clear all</button>
@@ -449,6 +455,7 @@
       document.getElementById('hkShift').checked = settings.hotkey?.shift ?? false;
       document.getElementById('hkAlt').checked = settings.hotkey?.alt ?? false;
       document.getElementById('hkWin').checked = settings.hotkey?.win ?? true;
+      document.getElementById('saveHistory').checked = settings.saveHistory !== false;
     }
 
     async function saveSettings() {
@@ -462,6 +469,7 @@
         },
         cleanupProvider: document.getElementById('cleanupProvider').value,
         micDeviceId: document.getElementById('micDeviceId').value,
+        saveHistory: document.getElementById('saveHistory').checked,
         hotkey: {
           ctrl: document.getElementById('hkCtrl').checked,
           shift: document.getElementById('hkShift').checked,

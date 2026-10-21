@@ -15,6 +15,8 @@
 
 'use strict';
 
+const { ipcMain } = require('electron');
+
 const IS_LINUX = process.platform === 'linux';
 
 // pipeline is required lazily (after app is ready) to avoid circular dep
@@ -28,16 +30,43 @@ function getPipeline() {
 
 let _recording = false;
 let _commandRecording = false;
+let _recorderReady = false;
 let _openSettings = null;  // set by init(), called on --settings
 let _togglePanel = null;   // set by init(), called on --panel-toggle
 
 function isRecording() { return _recording; }
 
+function waitForRecorderReady(callback) {
+  if (_recorderReady) {
+    callback();
+    return;
+  }
+
+  let settled = false;
+  const onReady = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timeout);
+    callback();
+  };
+  const timeout = setTimeout(() => {
+    if (settled) return;
+    settled = true;
+    ipcMain.removeListener('recorder-ready', onReady);
+    console.error('[trigger] recorder renderer was not ready within 5 seconds');
+  }, 5_000);
+  ipcMain.once('recorder-ready', onReady);
+}
+
+ipcMain.on('recorder-ready', () => {
+  _recorderReady = true;
+});
+
 // ── Argv parser ──────────────────────────────────────────────────────────────
 
 /**
  * Parse an argv array and execute:
- *   --start | --stop | --toggle | --settings | --action '<json>'
+ *   --start | --stop | --toggle | --settings
  *
  * Called from the first-instance's own process.argv (after app ready)
  * AND from the 'second-instance' event handler in main.js.
@@ -47,22 +76,13 @@ function isRecording() { return _recording; }
 async function handleArgv(argv) {
   console.log('[trigger] received:', argv);
 
-  // ── --action <json> ───────────────────────────────────────────────────────
-  const actionIdx = argv.indexOf('--action');
-  if (actionIdx !== -1) {
-    const jsonStr = argv[actionIdx + 1];
-    if (!jsonStr) {
-      console.error('[trigger] --action requires a JSON argument, e.g. --action \'{"name":"open_url","params":{"url":"https://example.com"}}\'');
-      return;
-    }
-    const { runAction } = require('./actions');
-    try {
-      const result = await runAction(jsonStr);
-      process.stdout.write(JSON.stringify({ ok: true, result }) + '\n');
-    } catch (err) {
-      process.stderr.write(JSON.stringify({ ok: false, error: err.message }) + '\n');
-      console.error('[trigger] --action failed:', err.message);
-    }
+  const needsRecorder = argv.includes('--start') ||
+    argv.includes('--toggle') || argv.includes('--command-toggle');
+  if (needsRecorder && !_recorderReady) {
+    console.log('[trigger] recorder renderer not ready; queueing trigger');
+    waitForRecorderReady(() => {
+      handleArgv(argv).catch((err) => console.error('[trigger] queued trigger error:', err.message));
+    });
     return;
   }
 
@@ -76,6 +96,10 @@ async function handleArgv(argv) {
     return;
   }
   if (argv.includes('--command-toggle')) {
+    if (_recording) {
+      console.log('[trigger] --command-toggle ignored, dictation recording is active');
+      return;
+    }
     if (_commandRecording) {
       _commandRecording = false;
       await getPipeline().stopCommandRecording().catch((err) => console.error('[trigger] command error:', err.message));
@@ -112,23 +136,26 @@ async function handleArgv(argv) {
 
   // ── --start / --stop / --toggle ───────────────────────────────────────────
   if (argv.includes('--start')) {
+    if (_commandRecording) { console.log('[trigger] --start ignored, command recording is active'); return; }
     if (_recording) { console.log('[trigger] --start ignored, already recording'); return; }
     await doStart();
   } else if (argv.includes('--stop')) {
     if (!_recording) { console.log('[trigger] --stop ignored, not recording'); return; }
     await doStop();
   } else if (argv.includes('--toggle')) {
+    if (_commandRecording) { console.log('[trigger] --toggle ignored, command recording is active'); return; }
     if (_recording) { await doStop(); } else { await doStart(); }
   }
 }
 
 async function doStart() {
-  _recording = true;
-  console.log('[trigger] recording started');
-  await getPipeline().startRecording().catch((err) => {
+  try {
+    await getPipeline().startRecording();
+    _recording = true;
+    console.log('[trigger] recording started');
+  } catch (err) {
     console.error('[trigger] startRecording error:', err);
-    _recording = false;
-  });
+  }
 }
 
 async function doStop() {
